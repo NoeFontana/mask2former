@@ -48,6 +48,7 @@ jobs:
         run: uv run pytest
 
   docs:
+    if: false # Disable GitHub Pages while repo is private
     runs-on: ubuntu-latest
     permissions:
       contents: read
