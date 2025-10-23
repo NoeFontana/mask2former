@@ -1,4 +1,4 @@
-# Python Template
+# Mask2Former
 
 [![CI](https://github.com/noe-fontana/mask2former/workflows/CI/badge.svg)](https://github.com/noe-fontana/mask2former/actions)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
