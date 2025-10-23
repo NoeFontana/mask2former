@@ -1,6 +1,6 @@
-"""Python Template package.
+"""Mask2Former package.
 
-A modern Python project template with best practices and tooling.
+A PyTorch reimplementation of Mask2Former using timm backbones.
 """
 
 __version__ = "0.1.0"

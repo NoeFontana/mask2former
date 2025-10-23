@@ -5,12 +5,18 @@ build-backend = "hatchling.build"
 [project]
 name = "mask2former"
 version = "0.1.0"
-description = "A modern Python project template with best practices"
+description = "A PyTorch reimplementation of Mask2Former using timm backbones."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
 authors = [{ name = "Noé Fontana", email = "noe.fontana.pro@gmail.com" }]
-keywords = ["template", "python", "modern"]
+keywords = [
+    "mask2former",
+    "python",
+    "pytorch",
+    "computer vision",
+    "deep learning",
+]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
