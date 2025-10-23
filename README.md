@@ -36,16 +36,11 @@ uv sync --all-extras
 ### Development
 
 ```bash
-# Activate the virtual environment (if using pip)
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
 # Run tests
 uv run pytest
-# or with pip: pytest
 
 # Run tests with coverage
 uv run pytest --cov
-# or with pip: pytest --cov
 
 # Lint and format code
 uv run ruff check .          # Check for issues
