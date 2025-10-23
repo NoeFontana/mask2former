@@ -90,8 +90,7 @@ uv run mkdocs build
 ```
 mask2former/
 ├── .github/
-│   ├── workflows/          # GitHub Actions CI/CD
-│   └── dependabot.yml      # Dependabot configuration
+│   └── workflows/          # GitHub Actions CI/CD
 ├── docs/                   # Documentation source
 ├── src/
 │   └── mask2former/    # Main package source code
@@ -107,17 +106,6 @@ mask2former/
 ├── pyproject.toml         # Project configuration
 └── README.md
 ```
-
-## Configuration
-
-The project uses `pyproject.toml` for all tool configuration:
-
-- **Build system**: Uses [hatchling](https://hatch.pypa.io/) as the build backend
-- **Dependencies**: Managed by uv, defined in `pyproject.toml`
-- **Linting & Formatting**: Configured for ruff with sensible defaults
-- **Type Checking**: Pyright configuration with strict settings
-- **Testing**: Pytest with coverage reporting and useful plugins
-- **Documentation**: MkDocs with Material theme and Python docstring support
 
 ## Contributing
 
@@ -141,11 +129,3 @@ The project uses `pyproject.toml` for all tool configuration:
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- [uv](https://docs.astral.sh/uv/) for fast Python package management
-- [ruff](https://docs.astral.sh/ruff/) for lightning-fast Python linting and formatting
-- [pyright](https://microsoft.github.io/pyright/) for static type checking
-- [pytest](https://docs.pytest.org/) for the testing framework
-- [MkDocs](https://www.mkdocs.org/) and [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) for documentation
