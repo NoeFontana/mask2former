@@ -1,8 +1,6 @@
-# Python Template
+# Mask2Former
 
-Welcome to the Python Template documentation!
-
-This project provides a modern Python project template with best practices and tooling.
+A PyTorch reimplementation of mask2former using timm backbones.
 
 ## Quick Start
 
@@ -12,11 +10,5 @@ This project provides a modern Python project template with best practices and t
 4. Start developing!
 
 ## Features
-
-- Modern tooling with uv, ruff, and pyright
-- Comprehensive testing setup with pytest
-- CI/CD with GitHub Actions
-- Documentation with MkDocs
-- Pre-commit hooks for code quality
 
 For more information, see the [README](https://github.com/NoeFontana/mask2former/blob/main/README.md).

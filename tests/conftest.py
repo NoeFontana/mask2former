@@ -1,13 +1,16 @@
 """Test configuration and fixtures."""
 
+from urllib.request import urlopen
+
 import pytest
+from PIL import Image
 
 
 @pytest.fixture
-def sample_data():
-    """Sample data for testing."""
-    return {
-        "numbers": [1, 2, 3, 4, 5],
-        "text": "Hello, World!",
-        "dict": {"key": "value", "number": 42},
-    }
+def sample_image():
+    """Sample image for testing."""
+    return Image.open(
+        urlopen(
+            "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/beignets-task-guide.png"
+        )
+    )

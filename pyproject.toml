@@ -20,11 +20,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-dependencies = [
-    "timm>=1.0.20",
-    # Add your project dependencies here
-    "torch>=2.9.0",
-]
+dependencies = ["setuptools>=80.9.0", "timm>=1.0.20", "torch>=2.9.0"]
 
 [project.optional-dependencies]
 dev = [
@@ -47,12 +43,10 @@ Repository = "https://github.com/NoeFontana/mask2former.git"
 Documentation = "https://NoeFontana.github.io/mask2former/"
 Issues = "https://github.com/NoeFontana/mask2former/issues"
 
-[project.scripts]
-mask2former = "python_template.cli:main"
 
 # Hatchling configuration
 [tool.hatch.build.targets.wheel]
-packages = ["src/python_template"]
+packages = ["src/mask2former"]
 
 [tool.hatch.build.targets.sdist]
 exclude = [
@@ -170,7 +164,7 @@ addopts = [
     "-ra",
     "--strict-markers",
     "--strict-config",
-    "--cov=src/python_template",
+    "--cov=src/mask2former",
     "--cov-branch",
     "--cov-report=term-missing",
     "--cov-report=html:htmlcov",

@@ -2,10 +2,6 @@
 
 This is the API reference for the `mask2former` package.
 
-## `python_template.core`
+## `mask2former.modeling`
 
-::: python_template.core
-
-## `python_template.cli`
-
-::: python_template.cli
+::: mask2former.modeling.backbone

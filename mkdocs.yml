@@ -63,4 +63,4 @@ nav:
   - Changelog: changelog.md
 
 watch:
-  - src/python_template
+  - src/mask2former
