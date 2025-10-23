@@ -43,12 +43,10 @@ Repository = "https://github.com/NoeFontana/mask2former.git"
 Documentation = "https://NoeFontana.github.io/mask2former/"
 Issues = "https://github.com/NoeFontana/mask2former/issues"
 
-[project.scripts]
-mask2former = "python_template.cli:main"
 
 # Hatchling configuration
 [tool.hatch.build.targets.wheel]
-packages = ["src/python_template"]
+packages = ["src/mask2former"]
 
 [tool.hatch.build.targets.sdist]
 exclude = [
@@ -166,7 +164,7 @@ addopts = [
     "-ra",
     "--strict-markers",
     "--strict-config",
-    "--cov=src/python_template",
+    "--cov=src/mask2former",
     "--cov-branch",
     "--cov-report=term-missing",
     "--cov-report=html:htmlcov",

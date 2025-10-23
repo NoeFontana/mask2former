@@ -94,7 +94,7 @@ mask2former/
 │   └── dependabot.yml      # Dependabot configuration
 ├── docs/                   # Documentation source
 ├── src/
-│   └── python_template/    # Main package source code
+│   └── mask2former/    # Main package source code
 │       ├── __init__.py
 │       └── ...
 ├── tests/                  # Test suite
