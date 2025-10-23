@@ -8,6 +8,7 @@ from mask2former.modeling.backbone import Backbone
 def test_forward_image(sample_image: Image.Image) -> None:
     # Create backbone
     backbone = Backbone()
+    backbone.eval()
 
     transforms = transforms_factory.create_transform(
         **config.resolve_model_data_config(backbone.model), is_training=False
