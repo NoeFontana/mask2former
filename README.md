@@ -5,7 +5,7 @@
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Checked with pyright](https://microsoft.github.io/pyright/img/pyright_badge.svg)](https://microsoft.github.io/pyright/)
 
-A PyTorch reimplementation of mask2former using timm backbones.
+A [PyTorch](https://pytorch.org/projects/pytorch/) reimplementation of [Mask2Former](https://arxiv.org/pdf/2112.01527) using timm backbones.
 
 ## Requirements
 
