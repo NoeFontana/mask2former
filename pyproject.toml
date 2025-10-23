@@ -20,11 +20,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-dependencies = [
-    "timm>=1.0.20",
-    # Add your project dependencies here
-    "torch>=2.9.0",
-]
+dependencies = ["setuptools>=80.9.0", "timm>=1.0.20", "torch>=2.9.0"]
 
 [project.optional-dependencies]
 dev = [
