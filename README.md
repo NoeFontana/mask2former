@@ -1,23 +1,11 @@
 # Python Template
 
-[![CI](https://github.com/noe-fontana/python-template/workflows/CI/badge.svg)](https://github.com/noe-fontana/python-template/actions)
+[![CI](https://github.com/noe-fontana/mask2former/workflows/CI/badge.svg)](https://github.com/noe-fontana/mask2former/actions)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Checked with pyright](https://microsoft.github.io/pyright/img/pyright_badge.svg)](https://microsoft.github.io/pyright/)
 
-A modern Python project template with best practices and tooling.
-
-## Features
-
-- 🚀 **Modern tooling**: Uses [uv](https://docs.astral.sh/uv/) for dependency management, [ruff](https://docs.astral.sh/ruff/) for linting and formatting, and [pyright](https://microsoft.github.io/pyright/) for type checking
-- 📦 **Src layout**: Follows the recommended [src layout](https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/) for better packaging
-- 🧪 **Testing**: Comprehensive testing setup with [pytest](https://docs.pytest.org/), coverage reporting, and parallel test execution
-- 🔄 **CI/CD**: GitHub Actions workflows for testing, linting, type checking, and security scanning
-- 📚 **Documentation**: Ready-to-use [MkDocs](https://www.mkdocs.org/) configuration with Material theme
-- 🔧 **Pre-commit hooks**: Automated code quality checks with [pre-commit](https://pre-commit.com/)
-- 🏷️ **Type hints**: Full type annotation support with static type checking
-- 📋 **Code quality**: Enforced code standards with comprehensive linting rules
-- 🔐 **Security**: Automated vulnerability scanning with safety checks
+A PyTorch reimplementation of mask2former using timm backbones.
 
 ## Requirements
 
@@ -30,8 +18,8 @@ A modern Python project template with best practices and tooling.
 
 ```bash
 # Clone the repository
-git clone https://github.com/NoeFontana/python-template.git
-cd python-template
+git clone https://github.com/NoeFontana/mask2former.git
+cd mask2former
 
 # Install uv if you haven't already
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -100,7 +88,7 @@ uv run mkdocs build
 ## Project Structure
 
 ```
-python-template/
+mask2former/
 ├── .github/
 │   ├── workflows/          # GitHub Actions CI/CD
 │   └── dependabot.yml      # Dependabot configuration

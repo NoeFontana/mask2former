@@ -1,8 +1,8 @@
 site_name: Python Template
 site_description: A modern Python project template with best practices and tooling
-site_url: https://NoeFontana.github.io/python-template/
-repo_url: https://github.com/NoeFontana/python-template
-repo_name: NoeFontana/python-template
+site_url: https://NoeFontana.github.io/mask2former/
+repo_url: https://github.com/NoeFontana/mask2former
+repo_name: NoeFontana/mask2former
 
 theme:
   name: material

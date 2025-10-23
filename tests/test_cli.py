@@ -11,7 +11,7 @@ class TestCLI:
     def test_create_parser(self):
         """Test that the parser is created correctly."""
         parser = create_parser()
-        assert parser.prog == "python-template"
+        assert parser.prog == "mask2former"
 
     def test_greet_command(self, capsys):
         """Test the greet command."""

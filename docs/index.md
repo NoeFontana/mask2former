@@ -19,4 +19,4 @@ This project provides a modern Python project template with best practices and t
 - Documentation with MkDocs
 - Pre-commit hooks for code quality
 
-For more information, see the [README](https://github.com/NoeFontana/python-template/blob/main/README.md).
+For more information, see the [README](https://github.com/NoeFontana/mask2former/blob/main/README.md).

@@ -1,4 +1,4 @@
-"""Command-line interface for the python-template package."""
+"""Command-line interface for the mask2former package."""
 
 import argparse
 import sys
@@ -10,7 +10,7 @@ def create_parser() -> argparse.ArgumentParser:
     """Create the command-line argument parser."""
     parser = argparse.ArgumentParser(
         description="Python Template CLI",
-        prog="python-template",
+        prog="mask2former",
     )
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
