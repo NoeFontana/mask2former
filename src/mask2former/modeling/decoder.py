@@ -97,3 +97,74 @@ class MaskedAttention(nn.Module):
         )
 
         return self.out_proj(attn_out) + query_features
+
+
+class SelfAttention(nn.Module):
+    """Self attention module.
+
+    This module implements the Self-Attention of the transformer decoder module.
+
+    Args:
+        embedding_dim (int): Dimension of the embedding space for attention computation.
+        num_head (int): Number of attention heads.
+    """
+
+    def __init__(self, embedding_dim: int, num_head: int) -> None:
+        super().__init__()
+
+        if embedding_dim % num_head:
+            raise ValueError(
+                f"embedding_dim must be divisible by num_head, but got "
+                f"embedding_dim={embedding_dim} and num_head={num_head}"
+            )
+
+        self.num_head = num_head
+        self.head_embedding_dim = embedding_dim // num_head
+
+        self.out_proj = (
+            nn.Linear(embedding_dim, embedding_dim) if num_head > 1 else nn.Identity()
+        )
+
+        self.qkv_projector = nn.Linear(
+            in_features=embedding_dim, out_features=3 * embedding_dim
+        )
+
+    def forward(
+        self,
+        query_features: torch.Tensor,
+    ) -> torch.Tensor:
+        """Forward pass of the self attention module.
+
+        Args:
+            query_features (torch.Tensor): Query features tensor.
+                Shape: (batch_size, num_queries, embedding_dim)
+
+        Returns:
+            torch.Tensor: Attended feature tensor.
+                Shape: (batch_size, num_queries, embedding_dim)
+        """
+        batch_size, num_queries, embedding_dim = query_features.shape
+
+        qkv = self.qkv_projector(query_features)
+        q, k, v = qkv.chunk(3, dim=-1)
+
+        # Reshape for multi-head attention
+        q = q.view(
+            batch_size, num_queries, self.num_head, self.head_embedding_dim
+        ).transpose(1, 2)
+        k = k.view(
+            batch_size, num_queries, self.num_head, self.head_embedding_dim
+        ).transpose(1, 2)
+        v = v.view(
+            batch_size, num_queries, self.num_head, self.head_embedding_dim
+        ).transpose(1, 2)
+
+        attn_out = torch.nn.functional.scaled_dot_product_attention(q, k, v)
+
+        attn_out = (
+            attn_out.transpose(1, 2)
+            .contiguous()
+            .view(batch_size, num_queries, embedding_dim)
+        )
+
+        return self.out_proj(attn_out) + query_features
