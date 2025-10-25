@@ -96,7 +96,7 @@ class MaskedAttention(nn.Module):
             .view(batch_size, num_queries, embedding_dim)
         )
 
-        return self.out_proj(attn_out) + query_features
+        return self.out_proj(attn_out)
 
 
 class SelfAttention(nn.Module):
@@ -167,7 +167,7 @@ class SelfAttention(nn.Module):
             .view(batch_size, num_queries, embedding_dim)
         )
 
-        return self.out_proj(attn_out) + query_features
+        return self.out_proj(attn_out)
 
 
 class FFN(nn.Module):
