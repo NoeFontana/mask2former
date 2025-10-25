@@ -176,6 +176,7 @@ addopts = [
     "--cov-report=html:htmlcov",
     "--cov-report=xml",
     "--cov-fail-under=85",
+    "-m not benchmark",
 ]
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
@@ -185,6 +186,7 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
+    "benchmark: marks tests as performance benchmarks (deselect with '-m \"not benchmark\"')",
 ]
 
 # Coverage configuration
