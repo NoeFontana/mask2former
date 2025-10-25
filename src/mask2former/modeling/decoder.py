@@ -11,10 +11,24 @@ class MaskedAttention(nn.Module):
 
     Args:
         embedding_dim (int): Dimension of the embedding space for attention computation.
+        num_head (int): Number of attention heads.
     """
 
-    def __init__(self, embedding_dim: int) -> None:
+    def __init__(self, embedding_dim: int, num_head: int) -> None:
         super().__init__()
+
+        if embedding_dim % num_head:
+            raise ValueError(
+                f"embedding_dim must be divisible by num_head, but got "
+                f"embedding_dim={embedding_dim} and num_head={num_head}"
+            )
+
+        self.num_head = num_head
+        self.head_embedding_dim = embedding_dim // num_head
+
+        self.out_proj = (
+            nn.Linear(embedding_dim, embedding_dim) if num_head > 1 else nn.Identity()
+        )
 
         self.query_projector = nn.Linear(
             in_features=embedding_dim, out_features=embedding_dim
@@ -47,15 +61,39 @@ class MaskedAttention(nn.Module):
             torch.Tensor: Attended feature tensor.
                 Shape: (batch_size, num_queries, embedding_dim)
         """
-        image_features = image_features.flatten(2).permute(
-            0, 2, 1
-        )  # (N, H*W, embedding_dim)
-        mask = mask.flatten(2)  # (N, num_queries, H*W)
+        batch_size, embedding_dim, height, width = image_features.shape
+        num_queries = query_features.shape[1]
+        spatial_size = height * width
+
+        # Reshape for attention (N, C, H, W) -> (N, H*W, C)
+        image_features = image_features.view(
+            batch_size, embedding_dim, spatial_size
+        ).transpose(-2, -1)
 
         q = self.query_projector(query_features)
         k = self.key_projector(image_features)
         v = self.value_projector(image_features)
 
-        attn_out = torch.nn.functional.scaled_dot_product_attention(q, k, v, mask)
+        # Reshape for multi-head attention
+        q = q.view(
+            batch_size, num_queries, self.num_head, self.head_embedding_dim
+        ).transpose(1, 2)
+        k = k.view(
+            batch_size, spatial_size, self.num_head, self.head_embedding_dim
+        ).transpose(1, 2)
+        v = v.view(
+            batch_size, spatial_size, self.num_head, self.head_embedding_dim
+        ).transpose(1, 2)
 
-        return attn_out + query_features
+        attn_mask = mask.view(batch_size, 1, num_queries, spatial_size)
+        attn_out = torch.nn.functional.scaled_dot_product_attention(
+            q, k, v, attn_mask=attn_mask
+        )
+
+        attn_out = (
+            attn_out.transpose(1, 2)
+            .contiguous()
+            .view(batch_size, num_queries, embedding_dim)
+        )
+
+        return self.out_proj(attn_out) + query_features
