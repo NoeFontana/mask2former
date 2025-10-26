@@ -1,3 +1,5 @@
+from typing import cast
+
 import torch
 from torch import nn
 
@@ -190,15 +192,13 @@ class SelfAttention(nn.Module):
 
 
 def generate_mask_logits(
-    output_size: tuple[int, int],
     query_features: torch.Tensor,
     pixel_features: torch.Tensor,
     mask_embedder: MLP,
 ) -> torch.Tensor:
-    """Convert query features to output size mask probabilities.
+    """Convert query features to mask logits at pixel_features resolution.
 
     Args:
-        output_size (tuple[int, int]): Output (height, width).
         query_features (torch.Tensor): Query features tensor.
             Shape: (batch_size, num_queries, embedding_dim)
         pixel_features (torch.Tensor): Pixel features tensor.
@@ -206,22 +206,12 @@ def generate_mask_logits(
         mask_embedder (MLP): MLP module to convert query features to mask embeddings.
 
     Returns:
-        torch.Tensor: Mask probabilities tensor.
-            Shape: (batch_size, num_queries, output_size[0], output_size[1])
+        torch.Tensor: Mask logits tensor at pixel_features resolution.
+            Shape: (batch_size, num_queries, height, width)
     """
     mask_embed = mask_embedder(query_features)
     # Mask logits are obtained via a dot product over the embedding dimension
     outputs_mask = torch.einsum("bqc,bchw->bqhw", mask_embed, pixel_features)
-
-    # Interpolate to target size if different from pixel features size
-    current_size = pixel_features.shape[-2:]
-    if output_size != current_size:
-        outputs_mask = torch.nn.functional.interpolate(
-            outputs_mask,
-            size=output_size,
-            mode="bilinear",
-            align_corners=False,
-        )
 
     return outputs_mask
 
@@ -326,95 +316,11 @@ class DecoderLayer(nn.Module):
         return query_features
 
 
-class MultiScaleDecoderLayer(nn.Module):
-    """Multi-Scale Transformer Decoder Layer for Mask2Former."""
-
-    def __init__(
-        self,
-        embedding_dim: int,
-        num_head: int,
-        hidden_dim: int,
-        mask_predictor: MLP,
-        num_feature_levels: int = 3,
-    ) -> None:
-        super().__init__()
-
-        self.decoder = nn.ModuleList(
-            [
-                DecoderLayer(embedding_dim, num_head, hidden_dim)
-                for _ in range(num_feature_levels)
-            ]
-        )
-        self.mask_predictor = mask_predictor
-        self.num_feature_levels = num_feature_levels
-        self.num_head = num_head
-
-    def forward(
-        self,
-        query_features: torch.Tensor,
-        image_features_list: list[torch.Tensor],
-        mask_features: torch.Tensor,
-        pos_query_embeddings: torch.Tensor,
-        pos_image_embeddings_list: list[torch.Tensor],
-        return_auxiliary_masks: bool = True,
-    ) -> tuple[torch.Tensor, torch.Tensor | None]:
-        """Forward pass of the multi-scale decoder layer."""
-        batch_size, num_queries = query_features.shape[:2]
-
-        # Only allocate auxiliary masks tensor if needed
-        auxiliary_masks = None
-        if return_auxiliary_masks:
-            max_spatial_size = max(
-                feat.shape[-2] * feat.shape[-1] for feat in image_features_list
-            )
-            auxiliary_masks = torch.empty(
-                self.num_feature_levels,
-                batch_size,
-                num_queries,
-                max_spatial_size,
-                device=query_features.device,
-                dtype=query_features.dtype,
-            )
-
-        for i in range(self.num_feature_levels):
-            image_features = image_features_list[i]
-            pos_image_embeddings = pos_image_embeddings_list[i]
-            decoder_layer = self.decoder[i]
-
-            image_height, image_width = image_features.shape[-2:]
-
-            # Generate mask logits (not probabilities yet)
-            mask_logits = generate_mask_probabilities(
-                (image_height, image_width),
-                query_features,
-                mask_features,
-                self.mask_predictor,
-            )
-
-            # Store auxiliary masks if requested
-            if auxiliary_masks is not None:
-                masks_flat = mask_logits.view(batch_size, num_queries, -1)
-                spatial_size = masks_flat.shape[-1]
-                auxiliary_masks[i, :, :, :spatial_size] = masks_flat
-
-            # Generate boolean attention mask
-            attention_mask = generate_attention_mask(
-                mask_logits, (image_height, image_width)
-            )
-
-            query_features = decoder_layer(
-                query_features,
-                image_features,
-                attention_mask,
-                pos_query_embeddings,
-                pos_image_embeddings,
-            )
-
-        return query_features, auxiliary_masks
-
-
 class TransformerDecoder(nn.Module):
-    """Transformer Decoder for Mask2Former."""
+    """Transformer Decoder for Mask2Former.
+
+    It consists of multiple decoder layers, each processing multiple feature levels.
+    """
 
     def __init__(
         self,
@@ -425,41 +331,43 @@ class TransformerDecoder(nn.Module):
         hidden_dim: int,
         num_classes: int,
         num_feature_levels: int = 3,
+        mask_embedder_hidden_dim: int = 256,
+        input_size: tuple[int, int] = (512, 512),
+        output_divisors: tuple[int, ...] = (32, 16, 8),
     ) -> None:
         super().__init__()
 
+        if len(output_divisors) != num_feature_levels:
+            raise ValueError(
+                f"The length of output_divisors ({len(output_divisors)}) must match "
+                f"num_feature_levels ({num_feature_levels})."
+            )
+
         self.num_layers = num_layers
         self.num_feature_levels = num_feature_levels
-        self.num_head = num_head
 
-        self.mask_embedder = MLP(embedding_dim, hidden_dim=256)
-
-        # Add decoder normalization (matches reference)
+        self.mask_embedder = MLP(embedding_dim, hidden_dim=mask_embedder_hidden_dim)
         self.decoder_norm = nn.LayerNorm(embedding_dim)
 
         self.initial_queries = nn.Parameter(torch.randn(1, num_query, embedding_dim))
         self.pos_query_embed = nn.Parameter(torch.randn(1, num_query, embedding_dim))
 
+        # Create a nested ModuleList for better structural representation
         self.layers = nn.ModuleList(
             [
-                MultiScaleDecoderLayer(
-                    embedding_dim,
-                    num_head,
-                    hidden_dim,
-                    self.mask_embedder,
-                    num_feature_levels,
+                nn.ModuleList(
+                    [
+                        DecoderLayer(embedding_dim, num_head, hidden_dim)
+                        for _ in range(num_feature_levels)
+                    ]
                 )
                 for _ in range(num_layers)
             ]
         )
 
-        # Prediction heads (matches reference structure)
-        self.classifier = nn.Linear(embedding_dim, num_classes + 1)
-
-        # Input configuration
-        self.input_height = 512
-        self.input_width = 512
-        self.output_divisors = (32, 16, 8)
+        # Input configuration for positional embeddings
+        self.input_height, self.input_width = input_size
+        self.output_divisors = output_divisors
 
         # Register positional embeddings as buffers
         for i, divisor in enumerate(self.output_divisors):
@@ -469,33 +377,42 @@ class TransformerDecoder(nn.Module):
                     self.input_height // divisor,
                     self.input_width // divisor,
                 )
-                .permute(0, 2, 3, 1)
+                .permute(1, 2, 0)
                 .view(1, -1, embedding_dim)
             )
             self.register_buffer(f"ape_{i}", ape)
+
+        # Initialize parameters
+        self._reset_parameters()
+
+    def _reset_parameters(self) -> None:
+        """Initialize learnable parameters."""
+        nn.init.xavier_uniform_(self.initial_queries)
+        nn.init.xavier_uniform_(self.pos_query_embed)
 
     def forward_prediction_heads(
         self,
         query_features: torch.Tensor,
         mask_features: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        """Forward prediction heads ."""
-        # Apply decoder normalization
+        """Forward prediction heads.
+
+        Returns:
+            tuple[torch.Tensor, torch.Tensor]: Tuple containing:
+                - decoder_output (torch.Tensor): Normalized query features.
+                    Shape: (batch_size, num_queries, embedding_dim)
+                - outputs_mask (torch.Tensor): Mask logits at mask_features resolution.
+                    Shape: (batch_size, num_queries, height, width)
+        """
         decoder_output = self.decoder_norm(query_features)
 
-        # Generate class predictions
-        outputs_class = self.classifier(decoder_output)
-
-        # Generate mask predictions
-        mask_height, mask_width = mask_features.shape[-2:]
-        outputs_mask = generate_mask_probabilities(
-            (mask_height, mask_width),
+        outputs_mask = generate_mask_logits(
             decoder_output,
             mask_features,
             self.mask_embedder,
         )
 
-        return outputs_class, outputs_mask
+        return decoder_output, outputs_mask
 
     def forward(
         self,
@@ -504,54 +421,63 @@ class TransformerDecoder(nn.Module):
         return_auxiliary_masks: bool = True,
     ) -> dict[str, torch.Tensor]:
         """Forward pass optimized for torch.compile and torch.export."""
+        device, dtype = self.initial_queries.device, self.initial_queries.dtype
 
         query_features = self.initial_queries.expand(mask_features.shape[0], -1, -1)
+        pos_query = self.pos_query_embed.expand(mask_features.shape[0], -1, -1)
 
-        # Build positional embeddings list
         pos_embeddings_list = [
             getattr(self, f"ape_{i}") for i in range(self.num_feature_levels)
         ]
 
-        # Pre-allocate auxiliary masks if needed
-        all_aux_masks = torch.empty(0, device=query_features.device)
-        if return_auxiliary_masks:
-            batch_size, num_queries = query_features.shape[:2]
-            max_spatial = max(
-                feat.shape[-2] * feat.shape[-1] for feat in image_features_list
-            )
-            all_aux_masks = torch.empty(
-                self.num_layers,
-                self.num_feature_levels,
-                batch_size,
-                num_queries,
-                max_spatial,
-                device=query_features.device,
-                dtype=query_features.dtype,
-            )
+        all_aux_masks = []
 
-        # Process through decoder layers
-        for layer_idx in range(self.num_layers):
-            layer = self.layers[layer_idx]
-            query_features, aux_masks = layer(
-                query_features,
-                image_features_list,
-                mask_features,
-                self.pos_query_embed.expand(query_features.shape[0], -1, -1),
-                pos_embeddings_list,
-                return_auxiliary_masks,
-            )
+        for layer in self.layers:
+            layer = cast(nn.ModuleList, layer)
+            layer_aux_masks = []
+            for level_idx, decoder_layer in enumerate(layer):
+                image_features = image_features_list[level_idx]
+                pos_image_embeddings = pos_embeddings_list[level_idx]
 
-            if aux_masks is not None:
-                all_aux_masks[layer_idx] = aux_masks
+                # Generate mask logits at mask_features resolution (not image_features)
+                mask_logits = generate_mask_logits(
+                    query_features,
+                    mask_features,
+                    self.mask_embedder,
+                )
 
-        # Generate final predictions using prediction heads
-        classes, final_masks = self.forward_prediction_heads(
+                image_height, image_width = image_features.shape[-2:]
+
+                if return_auxiliary_masks:
+                    layer_aux_masks.append(mask_logits)
+
+                attention_mask = generate_attention_mask(
+                    mask_logits, (image_height, image_width)
+                )
+
+                query_features = decoder_layer(
+                    query_features,
+                    image_features,
+                    attention_mask,
+                    pos_query,
+                    pos_image_embeddings,
+                )
+
+            if return_auxiliary_masks and layer_aux_masks:
+                all_aux_masks.append(torch.stack(layer_aux_masks, dim=0))
+
+        final_features, final_masks = self.forward_prediction_heads(
             query_features, mask_features
         )
 
+        aux_masks_tensor = (
+            torch.stack(all_aux_masks, dim=0)
+            if return_auxiliary_masks and all_aux_masks
+            else torch.empty(0, device=device, dtype=dtype)
+        )
+
         return {
-            "query_features": query_features,
-            "classes": classes,
+            "query_features": final_features,
             "masks": final_masks,
-            "auxiliary_masks": all_aux_masks,
+            "auxiliary_masks": aux_masks_tensor,
         }
