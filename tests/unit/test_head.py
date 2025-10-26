@@ -3,7 +3,7 @@
 import pytest
 import torch
 
-from mask2former.modeling.head import ClassificationHead
+from mask2former.modeling.common.head import ClassificationHead
 
 
 @pytest.fixture(scope="class")
