@@ -2,7 +2,11 @@ import torch
 
 
 def sine_pe_2d(
-    embedding_dim: int, height: int, width: int, temperature: int = 10_000
+    embedding_dim: int,
+    height: int,
+    width: int,
+    temperature: int = 10_000,
+    device: torch.device | None = None,
 ) -> torch.Tensor:
     """Generate 2D sinusoidal positional embeddings.
 
@@ -17,6 +21,8 @@ def sine_pe_2d(
         width (int): The width of the spatial grid.
         temperature (int, optional): The base for computing frequency scales.
             Defaults to 10_000.
+        device (torch.device, optional): The device to create tensors on.
+            Defaults to None (uses default device).
 
     Returns:
         torch.Tensor: A tensor of shape (embedding_dim, height, width) containing the
@@ -37,19 +43,20 @@ def sine_pe_2d(
     quarter_embedding = half_embedding // 2
 
     y_coords, x_coords = torch.meshgrid(
-        torch.arange(height, dtype=torch.float32),
-        torch.arange(width, dtype=torch.float32),
+        torch.arange(height, dtype=torch.float32, device=device),
+        torch.arange(width, dtype=torch.float32, device=device),
         indexing="ij",
     )
 
     freqs = temperature ** (
-        -torch.arange(0, quarter_embedding, dtype=torch.float32) / quarter_embedding
+        -torch.arange(0, quarter_embedding, dtype=torch.float32, device=device)
+        / quarter_embedding
     )
 
     y_freqs = torch.einsum("i,jk->ijk", freqs, y_coords)
     x_freqs = torch.einsum("i,jk->ijk", freqs, x_coords)
 
-    pe = torch.empty(embedding_dim, height, width, dtype=torch.float32)
+    pe = torch.empty(embedding_dim, height, width, dtype=torch.float32, device=device)
 
     pe[0:half_embedding:2] = torch.sin(y_freqs)
     pe[1:half_embedding:2] = torch.cos(y_freqs)
