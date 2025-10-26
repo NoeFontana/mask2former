@@ -12,7 +12,7 @@ This is a PyTorch reimplementation of Mask2Former for image segmentation, built 
   - Uses `timm.create_model(features_only=True)` with configurable `out_indices`
   - Standard pattern: `(1, 2, 3)` for ConvNeXt, `(2, 3, 4)` for ResNet
 - **`decoder.py`**: Transformer decoder with custom attention mechanisms
-  - `MaskedAttention`: Queries attend to image features through boolean masks
+  - `CrossAttention`: Queries attend to image features through boolean masks
   - `SelfAttention`: Standard transformer self-attention
   - Uses `torch.nn.functional.scaled_dot_product_attention` (PyTorch 2.0+)
 - **`pe.py`**: 2D sinusoidal positional embeddings for spatial understanding
