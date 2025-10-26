@@ -163,10 +163,11 @@ class TransformerDecoder(nn.Module):
         self.num_feature_levels = num_feature_levels
 
         self.mask_embedder = MLP(embedding_dim, hidden_dim=mask_embedder_hidden_dim)
-        self.decoder_norm = nn.LayerNorm(embedding_dim)
 
         self.initial_queries = nn.Parameter(torch.randn(1, num_query, embedding_dim))
         self.pos_query_embed = nn.Parameter(torch.randn(1, num_query, embedding_dim))
+
+        self.decoder_norm = nn.LayerNorm(embedding_dim)
 
         # Create a nested ModuleList for better structural representation
         self.layers = nn.ModuleList(
