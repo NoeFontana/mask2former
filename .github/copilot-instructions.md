@@ -51,6 +51,16 @@ make clean          # Remove all build artifacts and caches
 
 ## Project-Specific Conventions
 
+### Logging
+
+Always prefer using python's built-in `logging` module over print statements for debug/info output.
+
+```python
+import logging
+logger = logging.getLogger(__name__)
+logger.info("Informational message")
+```
+
 ### Tensor Shape Documentation
 
 Always document tensor shapes in docstrings using the pattern:
