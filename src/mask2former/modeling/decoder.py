@@ -44,6 +44,21 @@ class CrossAttention(nn.Module):
         self.value_projector = nn.Linear(
             in_features=embedding_dim, out_features=embedding_dim
         )
+        self._reset_parameters()
+
+    def _reset_parameters(self) -> None:
+        """Initialize learnable parameters."""
+        nn.init.xavier_uniform_(self.query_projector.weight)
+        nn.init.xavier_uniform_(self.key_projector.weight)
+        nn.init.xavier_uniform_(self.value_projector.weight)
+        if isinstance(self.out_proj, nn.Linear):
+            nn.init.xavier_uniform_(self.out_proj.weight)
+
+        nn.init.constant_(self.query_projector.bias, 0.0)
+        nn.init.constant_(self.key_projector.bias, 0.0)
+        nn.init.constant_(self.value_projector.bias, 0.0)
+        if isinstance(self.out_proj, nn.Linear):
+            nn.init.constant_(self.out_proj.bias, 0.0)
 
     def forward(
         self,
@@ -145,6 +160,21 @@ class SelfAttention(nn.Module):
         self.value_projector = nn.Linear(
             in_features=embedding_dim, out_features=embedding_dim
         )
+        self._reset_parameters()
+
+    def _reset_parameters(self) -> None:
+        """Initialize learnable parameters."""
+        nn.init.xavier_uniform_(self.query_projector.weight)
+        nn.init.xavier_uniform_(self.key_projector.weight)
+        nn.init.xavier_uniform_(self.value_projector.weight)
+        if isinstance(self.out_proj, nn.Linear):
+            nn.init.xavier_uniform_(self.out_proj.weight)
+
+        nn.init.constant_(self.query_projector.bias, 0.0)
+        nn.init.constant_(self.key_projector.bias, 0.0)
+        nn.init.constant_(self.value_projector.bias, 0.0)
+        if isinstance(self.out_proj, nn.Linear):
+            nn.init.constant_(self.out_proj.bias, 0.0)
 
     def forward(
         self, query_features: torch.Tensor, pos_query_embeddings: torch.Tensor
