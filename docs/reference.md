@@ -24,6 +24,14 @@ The decoder module implements the Mask2Former transformer decoder architecture.
 options:
 heading_level: 3
 
+### Attention
+
+The attn module implements attention mechanisms for the Mask2Former architecture.
+
+::: mask2former.modeling.attn
+options:
+heading_level: 3
+
 ### Positional Embeddings
 
 Utilities for generating positional embeddings.
