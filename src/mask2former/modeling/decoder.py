@@ -45,6 +45,8 @@ class MaskedAttention(nn.Module):
         query_features: torch.Tensor,
         image_features: torch.Tensor,
         mask: torch.Tensor,
+        pos_query_embeddings: torch.Tensor,
+        pos_image_embeddings: torch.Tensor,
     ) -> torch.Tensor:
         """Forward pass of the masked attention module.
 
@@ -54,8 +56,12 @@ class MaskedAttention(nn.Module):
             image_features (torch.Tensor): Image feature tensor.
                 Shape: (batch_size, embedding_dim, height, width)
             mask (torch.Tensor): Attention mask tensor (bool) to control which features
-                the queries can attend to. False positions will be masked.
+                the queries can attend to. False positions will be ignored.
                 Shape: (batch_size, num_queries, height, width)
+            pos_query_embeddings (torch.Tensor): Query feature positional embeddings.
+                Shape: (batch_size, num_queries, embedding_dim)
+            pos_image_embeddings (torch.Tensor): Image feature positional embeddings.
+                Shape: (batch_size, (height * width), embedding_dim)
 
         Returns:
             torch.Tensor: Attended feature tensor.
@@ -70,8 +76,8 @@ class MaskedAttention(nn.Module):
             batch_size, embedding_dim, spatial_size
         ).transpose(-2, -1)
 
-        q = self.query_projector(query_features)
-        k = self.key_projector(image_features)
+        q = self.query_projector(query_features + pos_query_embeddings)
+        k = self.key_projector(image_features + pos_image_embeddings)
         v = self.value_projector(image_features)
 
         # Reshape for multi-head attention
@@ -125,18 +131,26 @@ class SelfAttention(nn.Module):
             nn.Linear(embedding_dim, embedding_dim) if num_head > 1 else nn.Identity()
         )
 
-        self.qkv_projector = nn.Linear(
-            in_features=embedding_dim, out_features=3 * embedding_dim
+        self.query_projector = nn.Linear(
+            in_features=embedding_dim, out_features=embedding_dim
+        )
+        self.key_projector = nn.Linear(
+            in_features=embedding_dim, out_features=embedding_dim
+        )
+        self.value_projector = nn.Linear(
+            in_features=embedding_dim, out_features=embedding_dim
         )
 
     def forward(
-        self,
-        query_features: torch.Tensor,
+        self, query_features: torch.Tensor, pos_query_embeddings: torch.Tensor
     ) -> torch.Tensor:
         """Forward pass of the self attention module.
 
         Args:
             query_features (torch.Tensor): Query features tensor.
+                Shape: (batch_size, num_queries, embedding_dim)
+            pos_query_embeddings (torch.Tensor): Positional embeddings for
+                query features.
                 Shape: (batch_size, num_queries, embedding_dim)
 
         Returns:
@@ -145,8 +159,10 @@ class SelfAttention(nn.Module):
         """
         batch_size, num_queries, embedding_dim = query_features.shape
 
-        qkv = self.qkv_projector(query_features)
-        q, k, v = qkv.chunk(3, dim=-1)
+        q = k = query_features + pos_query_embeddings
+        q = self.query_projector(q)
+        k = self.key_projector(k)
+        v = self.value_projector(query_features)
 
         # Reshape for multi-head attention
         q = q.view(
@@ -168,24 +184,3 @@ class SelfAttention(nn.Module):
         )
 
         return self.out_proj(attn_out)
-
-
-class FFN(nn.Module):
-    """Feed-Forward Network module.
-
-    This module implements the Feed-Forward Network of the transformer decoder module.
-
-    Args:
-        embedding_dim (int): Dimension of the embedding space for attention computation.
-        hidden_dim (int): Dimension of the hidden layer.
-    """
-
-    def __init__(self, embedding_dim: int, hidden_dim: int) -> None:
-        super().__init__()
-
-        self.linear_1 = nn.Linear(in_features=embedding_dim, out_features=hidden_dim)
-        self.activation = nn.GELU()
-        self.linear_2 = nn.Linear(in_features=hidden_dim, out_features=embedding_dim)
-
-    def forward(self, queries: torch.Tensor) -> torch.Tensor:
-        return self.linear_2(self.activation(self.linear_1(queries)))

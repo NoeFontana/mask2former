@@ -5,7 +5,7 @@ import logging
 import pytest
 import torch
 
-from mask2former.modeling.decoder import FFN, MaskedAttention, SelfAttention
+from mask2former.modeling.decoder import MaskedAttention, SelfAttention
 
 # Set up logger for this module
 logger = logging.getLogger(__name__)
@@ -33,18 +33,6 @@ def standard_self_attention() -> SelfAttention:
 def small_self_attention() -> SelfAttention:
     """Fixture providing a small SelfAttention for quick tests."""
     return SelfAttention(embedding_dim=64, num_head=2)
-
-
-@pytest.fixture(scope="class")
-def standard_ffn() -> FFN:
-    """Fixture providing a standard FFN for testing."""
-    return FFN(embedding_dim=256, hidden_dim=1024)
-
-
-@pytest.fixture(scope="class")
-def small_ffn() -> FFN:
-    """Fixture providing a small FFN for quick tests."""
-    return FFN(embedding_dim=64, hidden_dim=256)
 
 
 class TestMaskedAttention:
@@ -84,11 +72,19 @@ class TestMaskedAttention:
 
         # Create input tensors
         query_features = torch.randn(batch_size, num_queries, embedding_dim)
+        pos_query_embeddings = torch.randn(batch_size, num_queries, embedding_dim)
         image_features = torch.randn(batch_size, embedding_dim, height, width)
         mask = torch.randint(0, 2, (batch_size, num_queries, height, width)).bool()
+        pos_image_embeddings = torch.randn(batch_size, height * width, embedding_dim)
 
         # Forward pass
-        output = attention(query_features, image_features, mask)
+        output = attention(
+            query_features,
+            image_features,
+            mask,
+            pos_query_embeddings,
+            pos_image_embeddings,
+        )
 
         # Check output shape matches input query shape
         assert output.shape == (batch_size, num_queries, embedding_dim)
@@ -103,10 +99,18 @@ class TestMaskedAttention:
         height, width = 8, 8
 
         query_features = torch.randn(batch_size, num_queries, embedding_dim)
+        pos_query_embeddings = torch.randn(batch_size, num_queries, embedding_dim)
         image_features = torch.randn(batch_size, embedding_dim, height, width)
         mask = torch.ones(batch_size, num_queries, height, width).bool()
+        pos_image_embeddings = torch.randn(batch_size, height * width, embedding_dim)
 
-        output = attention(query_features, image_features, mask)
+        output = attention(
+            query_features,
+            image_features,
+            mask,
+            pos_query_embeddings,
+            pos_image_embeddings,
+        )
 
         # The output should not be equal to input due to attention computation
         # but should have the same shape due to residual connection
@@ -120,15 +124,29 @@ class TestMaskedAttention:
         height, width = 4, 4
 
         query_features = torch.randn(batch_size, num_queries, embedding_dim)
+        pos_query_embeddings = torch.randn(batch_size, num_queries, embedding_dim)
         image_features = torch.randn(batch_size, embedding_dim, height, width)
+        pos_image_embeddings = torch.randn(batch_size, height * width, embedding_dim)
 
         # Create two different masks
         mask_all_true = torch.ones(batch_size, num_queries, height, width).bool()
         mask_partial = torch.zeros(batch_size, num_queries, height, width).bool()
         mask_partial[:, :, : height // 2, :] = True  # Only attend to top half
 
-        output_full = attention(query_features, image_features, mask_all_true)
-        output_partial = attention(query_features, image_features, mask_partial)
+        output_full = attention(
+            query_features,
+            image_features,
+            mask_all_true,
+            pos_query_embeddings,
+            pos_image_embeddings,
+        )
+        output_partial = attention(
+            query_features,
+            image_features,
+            mask_partial,
+            pos_query_embeddings,
+            pos_image_embeddings,
+        )
 
         # Different masks should produce different outputs
         assert not torch.allclose(output_full, output_partial, rtol=1e-3)
@@ -140,10 +158,18 @@ class TestMaskedAttention:
         height, width = 4, 4
 
         query_features = torch.randn(batch_size, num_queries, embedding_dim)
+        pos_query_embeddings = torch.randn(batch_size, num_queries, embedding_dim)
         image_features = torch.randn(batch_size, embedding_dim, height, width)
         mask_all_false = torch.zeros(batch_size, num_queries, height, width).bool()
+        pos_image_embeddings = torch.randn(batch_size, height * width, embedding_dim)
 
-        output = attention(query_features, image_features, mask_all_false)
+        output = attention(
+            query_features,
+            image_features,
+            mask_all_false,
+            pos_query_embeddings,
+            pos_image_embeddings,
+        )
 
         # Output should still have correct shape
         assert output.shape == query_features.shape
@@ -164,8 +190,16 @@ class TestMaskedAttention:
             batch_size, embedding_dim, height, width, requires_grad=True
         )
         mask = torch.randint(0, 2, (batch_size, num_queries, height, width)).bool()
+        pos_query_embeddings = torch.randn(batch_size, num_queries, embedding_dim)
+        pos_image_embeddings = torch.randn(batch_size, height * width, embedding_dim)
 
-        output = attention(query_features, image_features, mask)
+        output = attention(
+            query_features,
+            image_features,
+            mask,
+            pos_query_embeddings,
+            pos_image_embeddings,
+        )
         loss = output.sum()
         loss.backward()
 
@@ -190,10 +224,18 @@ class TestMaskedAttention:
         height, width = 16, 16
 
         query_features = torch.randn(batch_size, num_queries, embedding_dim)
+        pos_query_embeddings = torch.randn(batch_size, num_queries, embedding_dim)
         image_features = torch.randn(batch_size, embedding_dim, height, width)
         mask = torch.randint(0, 2, (batch_size, num_queries, height, width)).bool()
+        pos_image_embeddings = torch.randn(batch_size, height * width, embedding_dim)
 
-        output = attention(query_features, image_features, mask)
+        output = attention(
+            query_features,
+            image_features,
+            mask,
+            pos_query_embeddings,
+            pos_image_embeddings,
+        )
 
         assert output.shape == (batch_size, num_queries, embedding_dim)
         assert output.dtype == torch.float32
@@ -207,10 +249,18 @@ class TestMaskedAttention:
         batch_size, num_queries, embedding_dim = 1, 10, 64
 
         query_features = torch.randn(batch_size, num_queries, embedding_dim)
+        pos_query_embeddings = torch.randn(batch_size, num_queries, embedding_dim)
         image_features = torch.randn(batch_size, embedding_dim, height, width)
         mask = torch.randint(0, 2, (batch_size, num_queries, height, width)).bool()
+        pos_image_embeddings = torch.randn(batch_size, height * width, embedding_dim)
 
-        output = attention(query_features, image_features, mask)
+        output = attention(
+            query_features,
+            image_features,
+            mask,
+            pos_query_embeddings,
+            pos_image_embeddings,
+        )
 
         assert output.shape == (batch_size, num_queries, embedding_dim)
 
@@ -227,10 +277,18 @@ class TestMaskedAttention:
         height, width = 16, 16
 
         query_features = torch.randn(batch_size, num_queries, embedding_dim)
+        pos_query_embeddings = torch.randn(batch_size, num_queries, embedding_dim)
         image_features = torch.randn(batch_size, embedding_dim, height, width)
         mask = torch.randint(0, 2, (batch_size, num_queries, height, width)).bool()
+        pos_image_embeddings = torch.randn(batch_size, height * width, embedding_dim)
 
-        output = attention(query_features, image_features, mask)
+        output = attention(
+            query_features,
+            image_features,
+            mask,
+            pos_query_embeddings,
+            pos_image_embeddings,
+        )
 
         assert output.shape == (batch_size, num_queries, embedding_dim)
         assert output.dtype == torch.float32
@@ -246,15 +304,29 @@ class TestMaskedAttention:
         # Set seeds for reproducibility
         torch.manual_seed(42)
         query_features = torch.randn(batch_size, num_queries, embedding_dim)
+        pos_query_embeddings = torch.randn(batch_size, num_queries, embedding_dim)
         image_features = torch.randn(batch_size, embedding_dim, height, width)
         mask = torch.randint(0, 2, (batch_size, num_queries, height, width)).bool()
+        pos_image_embeddings = torch.randn(batch_size, height * width, embedding_dim)
 
         # Run twice with same inputs
         torch.manual_seed(42)
-        output1 = attention(query_features, image_features, mask)
+        output1 = attention(
+            query_features,
+            image_features,
+            mask,
+            pos_query_embeddings,
+            pos_image_embeddings,
+        )
 
         torch.manual_seed(42)
-        output2 = attention(query_features, image_features, mask)
+        output2 = attention(
+            query_features,
+            image_features,
+            mask,
+            pos_query_embeddings,
+            pos_image_embeddings,
+        )
 
         # Outputs should be identical
         assert torch.allclose(output1, output2, rtol=1e-6, atol=1e-8)
@@ -268,17 +340,31 @@ class TestMaskedAttention:
         height, width = 16, 16
 
         query_features = torch.randn(batch_size, num_queries, embedding_dim)
+        pos_query_embeddings = torch.randn(batch_size, num_queries, embedding_dim)
         image_features = torch.randn(batch_size, embedding_dim, height, width)
         mask = torch.randint(0, 2, (batch_size, num_queries, height, width)).bool()
+        pos_image_embeddings = torch.randn(batch_size, height * width, embedding_dim)
 
         # Compile the model
         compiled_attention = torch.compile(attention, fullgraph=True)
 
         # Run compiled version
-        compiled_output = compiled_attention(query_features, image_features, mask)
+        compiled_output = compiled_attention(
+            query_features,
+            image_features,
+            mask,
+            pos_query_embeddings,
+            pos_image_embeddings,
+        )
 
         # Run original version for comparison
-        original_output = attention(query_features, image_features, mask)
+        original_output = attention(
+            query_features,
+            image_features,
+            mask,
+            pos_query_embeddings,
+            pos_image_embeddings,
+        )
 
         # Check outputs are equivalent
         assert compiled_output.shape == original_output.shape
@@ -293,7 +379,9 @@ class TestMaskedAttention:
         height, width = 4, 8
 
         query_features = torch.randn(batch_size, num_queries, embedding_dim)
+        pos_query_embeddings = torch.randn(batch_size, num_queries, embedding_dim)
         image_features = torch.randn(batch_size, embedding_dim, height, width)
+        pos_image_embeddings = torch.randn(batch_size, height * width, embedding_dim)
         mask = torch.ones(batch_size, num_queries, height, width).bool()
 
         # Manually check the transformation
@@ -301,7 +389,13 @@ class TestMaskedAttention:
         assert expected_flattened.shape == (batch_size, height * width, embedding_dim)
 
         # Should not raise any errors
-        output = attention(query_features, image_features, mask)
+        output = attention(
+            query_features,
+            image_features,
+            mask,
+            pos_query_embeddings,
+            pos_image_embeddings,
+        )
         assert output.shape == (batch_size, num_queries, embedding_dim)
 
     def test_mask_flattening(self, standard_masked_attention: MaskedAttention) -> None:
@@ -311,15 +405,23 @@ class TestMaskedAttention:
         height, width = 4, 6
 
         query_features = torch.randn(batch_size, num_queries, embedding_dim)
+        pos_query_embeddings = torch.randn(batch_size, num_queries, embedding_dim)
         image_features = torch.randn(batch_size, embedding_dim, height, width)
         mask = torch.randint(0, 2, (batch_size, num_queries, height, width)).bool()
+        pos_image_embeddings = torch.randn(batch_size, height * width, embedding_dim)
 
         # Manually check mask transformation
         expected_mask_flat = mask.flatten(2)
         assert expected_mask_flat.shape == (batch_size, num_queries, height * width)
 
         # Should not raise any errors
-        output = attention(query_features, image_features, mask)
+        output = attention(
+            query_features,
+            image_features,
+            mask,
+            pos_query_embeddings,
+            pos_image_embeddings,
+        )
         assert output.shape == (batch_size, num_queries, embedding_dim)
 
     def test_multi_head_validation(self) -> None:
@@ -347,10 +449,18 @@ class TestMaskedAttention:
         height, width = 8, 8
 
         query_features = torch.randn(batch_size, num_queries, 64)
+        pos_query_embeddings = torch.randn(batch_size, num_queries, 64)
         image_features = torch.randn(batch_size, 64, height, width)
         mask = torch.randint(0, 2, (batch_size, num_queries, height, width)).bool()
+        pos_image_embeddings = torch.randn(batch_size, height * width, 64)
 
-        output = attention(query_features, image_features, mask)
+        output = attention(
+            query_features,
+            image_features,
+            mask,
+            pos_query_embeddings,
+            pos_image_embeddings,
+        )
         assert output.shape == (batch_size, num_queries, 64)
 
     @pytest.mark.parametrize("num_head", [1, 2, 4, 8, 16])
@@ -363,10 +473,18 @@ class TestMaskedAttention:
         height, width = 16, 16
 
         query_features = torch.randn(batch_size, num_queries, embedding_dim)
+        pos_query_embeddings = torch.randn(batch_size, num_queries, embedding_dim)
         image_features = torch.randn(batch_size, embedding_dim, height, width)
         mask = torch.randint(0, 2, (batch_size, num_queries, height, width)).bool()
+        pos_image_embeddings = torch.randn(batch_size, height * width, embedding_dim)
 
-        output = attention(query_features, image_features, mask)
+        output = attention(
+            query_features,
+            image_features,
+            mask,
+            pos_query_embeddings,
+            pos_image_embeddings,
+        )
 
         assert output.shape == (batch_size, num_queries, embedding_dim)
         assert attention.head_embedding_dim == embedding_dim // num_head
@@ -379,11 +497,19 @@ class TestMaskedAttention:
         height, width = 4, 4
 
         query_features = torch.randn(batch_size, num_queries, 256)
+        pos_query_embeddings = torch.randn(batch_size, num_queries, 256)
         image_features = torch.randn(batch_size, 256, height, width)
+        pos_image_embeddings = torch.randn(batch_size, height * width, 256)
         mask = torch.ones(batch_size, num_queries, height, width).bool()
 
         # Test that forward pass completes successfully with correct shapes
-        output = attention(query_features, image_features, mask)
+        output = attention(
+            query_features,
+            image_features,
+            mask,
+            pos_query_embeddings,
+            pos_image_embeddings,
+        )
         assert output.shape == (batch_size, num_queries, 256)
 
     def test_compile_validation(
@@ -395,25 +521,43 @@ class TestMaskedAttention:
         height, width = 16, 16
 
         query_features = torch.randn(batch_size, num_queries, embedding_dim)
+        pos_query_embeddings = torch.randn(batch_size, num_queries, embedding_dim)
         image_features = torch.randn(batch_size, embedding_dim, height, width)
         mask = torch.randint(0, 2, (batch_size, num_queries, height, width)).bool()
+        pos_image_embeddings = torch.randn(batch_size, height * width, embedding_dim)
 
         # Test compilation with different modes
         try:
             # Test fullgraph compilation
             compiled_attention_full = torch.compile(attention, fullgraph=True)
-            output_full = compiled_attention_full(query_features, image_features, mask)
+            output_full = compiled_attention_full(
+                query_features,
+                image_features,
+                mask,
+                pos_query_embeddings,
+                pos_image_embeddings,
+            )
             assert output_full.shape == (batch_size, num_queries, embedding_dim)
 
             # Test default compilation
             compiled_attention_default = torch.compile(attention)
             output_default = compiled_attention_default(
-                query_features, image_features, mask
+                query_features,
+                image_features,
+                mask,
+                pos_query_embeddings,
+                pos_image_embeddings,
             )
             assert output_default.shape == (batch_size, num_queries, embedding_dim)
 
             # Test that compiled versions produce consistent results
-            original_output = attention(query_features, image_features, mask)
+            original_output = attention(
+                query_features,
+                image_features,
+                mask,
+                pos_query_embeddings,
+                pos_image_embeddings,
+            )
             assert torch.allclose(output_full, original_output, rtol=1e-4, atol=1e-5)
             assert torch.allclose(output_default, original_output, rtol=1e-4, atol=1e-5)
 
@@ -440,8 +584,10 @@ class TestMaskedAttention:
         height, width = feature_size, feature_size
 
         query_features = torch.randn(batch_size, num_queries, embedding_dim)
+        pos_query_embeddings = torch.randn(batch_size, num_queries, embedding_dim)
         image_features = torch.randn(batch_size, embedding_dim, height, width)
         mask = torch.randint(0, 2, (batch_size, num_queries, height, width)).bool()
+        pos_image_embeddings = torch.randn(batch_size, height * width, embedding_dim)
 
         # Move to GPU if available for more realistic benchmarking
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -452,7 +598,13 @@ class TestMaskedAttention:
 
         # Warm up runs
         for _ in range(10):
-            _ = attention(query_features, image_features, mask)
+            _ = attention(
+                query_features,
+                image_features,
+                mask,
+                pos_query_embeddings,
+                pos_image_embeddings,
+            )
 
         if device.type == "cuda":
             torch.cuda.synchronize()
@@ -463,7 +615,13 @@ class TestMaskedAttention:
         start_time = time.perf_counter()
 
         for _ in range(num_runs):
-            output = attention(query_features, image_features, mask)
+            output = attention(
+                query_features,
+                image_features,
+                mask,
+                pos_query_embeddings,
+                pos_image_embeddings,
+            )
 
         if device.type == "cuda":
             torch.cuda.synchronize()
@@ -494,7 +652,13 @@ class TestMaskedAttention:
 
         # Warm up compiled version
         for _ in range(100):
-            _ = compiled_attention(query_features, image_features, mask)
+            _ = compiled_attention(
+                query_features,
+                image_features,
+                mask,
+                pos_query_embeddings,
+                pos_image_embeddings,
+            )
 
         if device.type == "cuda":
             torch.cuda.synchronize()
@@ -503,7 +667,13 @@ class TestMaskedAttention:
         start_time = time.perf_counter()
 
         for _ in range(num_runs):
-            compiled_output = compiled_attention(query_features, image_features, mask)
+            compiled_output = compiled_attention(
+                query_features,
+                image_features,
+                mask,
+                pos_query_embeddings,
+                pos_image_embeddings,
+            )
 
         if device.type == "cuda":
             torch.cuda.synchronize()
@@ -546,12 +716,18 @@ class TestSelfAttention:
         assert attention.head_embedding_dim == 32  # 256 // 8
 
         # Check that projectors are initialized correctly
-        assert isinstance(attention.qkv_projector, torch.nn.Linear)
+        assert isinstance(attention.query_projector, torch.nn.Linear)
+        assert isinstance(attention.key_projector, torch.nn.Linear)
+        assert isinstance(attention.value_projector, torch.nn.Linear)
         assert isinstance(attention.out_proj, torch.nn.Linear)
 
         # Check dimensions
-        assert attention.qkv_projector.in_features == 256
-        assert attention.qkv_projector.out_features == 768  # 3 * 256
+        assert attention.query_projector.in_features == 256
+        assert attention.query_projector.out_features == 256
+        assert attention.key_projector.in_features == 256
+        assert attention.key_projector.out_features == 256
+        assert attention.value_projector.in_features == 256
+        assert attention.value_projector.out_features == 256
         assert attention.out_proj.in_features == 256
         assert attention.out_proj.out_features == 256
 
@@ -562,9 +738,10 @@ class TestSelfAttention:
 
         # Create input tensor
         query_features = torch.randn(batch_size, num_queries, embedding_dim)
+        pos_query_embeddings = torch.randn(batch_size, num_queries, embedding_dim)
 
         # Forward pass
-        output = attention(query_features)
+        output = attention(query_features, pos_query_embeddings)
 
         # Check output shape matches input shape
         assert output.shape == (batch_size, num_queries, embedding_dim)
@@ -576,7 +753,8 @@ class TestSelfAttention:
         batch_size, num_queries, embedding_dim = 1, 10, 256
 
         query_features = torch.randn(batch_size, num_queries, embedding_dim)
-        output = attention(query_features)
+        pos_query_embeddings = torch.randn(batch_size, num_queries, embedding_dim)
+        output = attention(query_features, pos_query_embeddings)
 
         # The output should not be equal to input due to attention computation
         # but should have the same shape due to residual connection
@@ -593,8 +771,9 @@ class TestSelfAttention:
         # Create deterministic input
         torch.manual_seed(42)
         query_features = torch.randn(batch_size, num_queries, embedding_dim)
+        pos_query_embeddings = torch.randn(batch_size, num_queries, embedding_dim)
 
-        output = attention(query_features)
+        output = attention(query_features, pos_query_embeddings)
 
         # Output should have same shape as input
         assert output.shape == query_features.shape
@@ -603,7 +782,9 @@ class TestSelfAttention:
         # If we permute the input sequence, the output should be permuted the same way
         perm_indices = torch.tensor([4, 0, 2, 1, 3])
         permuted_input = query_features[:, perm_indices, :]
-        permuted_output = attention(permuted_input)
+        permuted_output = attention(
+            permuted_input, pos_query_embeddings[:, perm_indices, :]
+        )
 
         # Check that attention(permuted_input) == permuted(attention(input))
         expected_permuted_output = output[:, perm_indices, :]
@@ -619,8 +800,9 @@ class TestSelfAttention:
         query_features = torch.randn(
             batch_size, num_queries, embedding_dim, requires_grad=True
         )
+        pos_query_embeddings = torch.randn(batch_size, num_queries, embedding_dim)
 
-        output = attention(query_features)
+        output = attention(query_features, pos_query_embeddings)
         loss = output.sum()
         loss.backward()
 
@@ -628,7 +810,9 @@ class TestSelfAttention:
         assert query_features.grad is not None
 
         # Check that gradients are computed for parameters
-        assert attention.qkv_projector.weight.grad is not None
+        assert attention.query_projector.weight.grad is not None
+        assert attention.key_projector.weight.grad is not None
+        assert attention.value_projector.weight.grad is not None
 
     @pytest.mark.parametrize(
         "embedding_dim,num_head", [(64, 4), (128, 8), (256, 8), (512, 16)]
@@ -641,7 +825,8 @@ class TestSelfAttention:
         batch_size, num_queries = 2, 20
 
         query_features = torch.randn(batch_size, num_queries, embedding_dim)
-        output = attention(query_features)
+        pos_query_embeddings = torch.randn(batch_size, num_queries, embedding_dim)
+        output = attention(query_features, pos_query_embeddings)
 
         assert output.shape == (batch_size, num_queries, embedding_dim)
         assert output.dtype == torch.float32
@@ -658,7 +843,8 @@ class TestSelfAttention:
         embedding_dim = 64
 
         query_features = torch.randn(batch_size, num_queries, embedding_dim)
-        output = attention(query_features)
+        pos_query_embeddings = torch.randn(batch_size, num_queries, embedding_dim)
+        output = attention(query_features, pos_query_embeddings)
 
         assert output.shape == (batch_size, num_queries, embedding_dim)
         assert output.dtype == torch.float32
@@ -673,13 +859,14 @@ class TestSelfAttention:
         # Set seeds for reproducibility
         torch.manual_seed(42)
         query_features = torch.randn(batch_size, num_queries, embedding_dim)
+        pos_query_embeddings = torch.randn(batch_size, num_queries, embedding_dim)
 
         # Run twice with same inputs
         torch.manual_seed(42)
-        output1 = attention(query_features)
+        output1 = attention(query_features, pos_query_embeddings)
 
         torch.manual_seed(42)
-        output2 = attention(query_features)
+        output2 = attention(query_features, pos_query_embeddings)
 
         # Outputs should be identical
         assert torch.allclose(output1, output2, rtol=1e-6, atol=1e-8)
@@ -692,15 +879,16 @@ class TestSelfAttention:
         batch_size, num_queries, embedding_dim = 2, 50, 256
 
         query_features = torch.randn(batch_size, num_queries, embedding_dim)
+        pos_query_embeddings = torch.randn(batch_size, num_queries, embedding_dim)
 
         # Compile the model
         compiled_attention = torch.compile(attention, fullgraph=True)
 
         # Run compiled version
-        compiled_output = compiled_attention(query_features)
+        compiled_output = compiled_attention(query_features, pos_query_embeddings)
 
         # Run original version for comparison
-        original_output = attention(query_features)
+        original_output = attention(query_features, pos_query_embeddings)
 
         # Check outputs are equivalent
         assert compiled_output.shape == original_output.shape
@@ -728,9 +916,14 @@ class TestSelfAttention:
         assert isinstance(attention.out_proj, torch.nn.Identity)
 
         batch_size, num_queries = 2, 10
-        query_features = torch.randn(batch_size, num_queries, 64)
 
-        output = attention(query_features)
+        query_features = torch.randn(batch_size, num_queries, 64)
+        pos_query_embeddings = torch.randn(batch_size, num_queries, 64)
+
+        output = attention(
+            query_features,
+            pos_query_embeddings,
+        )
         assert output.shape == (batch_size, num_queries, 64)
 
     @pytest.mark.parametrize("num_head", [1, 2, 4, 8, 16])
@@ -741,8 +934,9 @@ class TestSelfAttention:
 
         batch_size, num_queries = 2, 20
         query_features = torch.randn(batch_size, num_queries, embedding_dim)
+        pos_query_embeddings = torch.randn(batch_size, num_queries, embedding_dim)
 
-        output = attention(query_features)
+        output = attention(query_features, pos_query_embeddings)
 
         assert output.shape == (batch_size, num_queries, embedding_dim)
         assert attention.head_embedding_dim == embedding_dim // num_head
@@ -753,9 +947,10 @@ class TestSelfAttention:
 
         batch_size, num_queries = 1, 5
         query_features = torch.randn(batch_size, num_queries, 256)
+        pos_query_embeddings = torch.randn(batch_size, num_queries, 256)
 
         # Test that forward pass completes successfully with correct shapes
-        output = attention(query_features)
+        output = attention(query_features, pos_query_embeddings)
         assert output.shape == (batch_size, num_queries, 256)
 
     def test_compile_validation(self, standard_self_attention: SelfAttention) -> None:
@@ -764,60 +959,29 @@ class TestSelfAttention:
         batch_size, num_queries, embedding_dim = 2, 50, 256
 
         query_features = torch.randn(batch_size, num_queries, embedding_dim)
+        pos_query_embeddings = torch.randn(batch_size, num_queries, embedding_dim)
 
         # Test compilation with different modes
         try:
             # Test fullgraph compilation
             compiled_attention_full = torch.compile(attention, fullgraph=True)
-            output_full = compiled_attention_full(query_features)
+            output_full = compiled_attention_full(query_features, pos_query_embeddings)
             assert output_full.shape == (batch_size, num_queries, embedding_dim)
 
             # Test default compilation
             compiled_attention_default = torch.compile(attention)
-            output_default = compiled_attention_default(query_features)
+            output_default = compiled_attention_default(
+                query_features, pos_query_embeddings
+            )
             assert output_default.shape == (batch_size, num_queries, embedding_dim)
 
             # Test that compiled versions produce consistent results
-            original_output = attention(query_features)
+            original_output = attention(query_features, pos_query_embeddings)
             assert torch.allclose(output_full, original_output, rtol=1e-4, atol=1e-5)
             assert torch.allclose(output_default, original_output, rtol=1e-4, atol=1e-5)
 
         except Exception as e:
             pytest.fail(f"Compilation failed with error: {e}")
-
-    def test_attention_weights_symmetry(
-        self, standard_self_attention: SelfAttention
-    ) -> None:
-        """Test self-attention specific properties like attention pattern symmetry."""
-        attention = standard_self_attention
-        batch_size, num_queries, embedding_dim = 1, 4, 256
-
-        # Create identical query features to test if attention is symmetric
-        identical_features = torch.ones(batch_size, num_queries, embedding_dim)
-        output = attention(identical_features)
-
-        # With identical inputs, all outputs should be identical due to symmetry
-        # (though still different from input due to learned parameters)
-        for i in range(num_queries):
-            for j in range(i + 1, num_queries):
-                assert torch.allclose(
-                    output[:, i, :], output[:, j, :], rtol=1e-4, atol=1e-5
-                )
-
-    def test_sequence_length_invariance(
-        self, small_self_attention: SelfAttention
-    ) -> None:
-        """Test that attention works with different sequence lengths."""
-        attention = small_self_attention
-        embedding_dim = 64
-
-        # Test with different sequence lengths
-        for seq_len in [1, 5, 10, 50, 100]:
-            batch_size = 1
-            query_features = torch.randn(batch_size, seq_len, embedding_dim)
-            output = attention(query_features)
-
-            assert output.shape == (batch_size, seq_len, embedding_dim)
 
     @pytest.mark.benchmark
     @pytest.mark.parametrize("num_queries", [100, 200, 300])
@@ -837,6 +1001,7 @@ class TestSelfAttention:
         batch_size, embedding_dim = 8, 256
 
         query_features = torch.randn(batch_size, num_queries, embedding_dim)
+        pos_query_embeddings = torch.randn(batch_size, num_queries, embedding_dim)
 
         # Move to GPU if available for more realistic benchmarking
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -845,7 +1010,7 @@ class TestSelfAttention:
 
         # Warm up runs
         for _ in range(10):
-            _ = attention(query_features)
+            _ = attention(query_features, pos_query_embeddings)
 
         if device.type == "cuda":
             torch.cuda.synchronize()
@@ -856,7 +1021,7 @@ class TestSelfAttention:
         start_time = time.perf_counter()
 
         for _ in range(num_runs):
-            output = attention(query_features)
+            output = attention(query_features, pos_query_embeddings)
 
         if device.type == "cuda":
             torch.cuda.synchronize()
@@ -886,7 +1051,7 @@ class TestSelfAttention:
 
         # Warm up compiled version
         for _ in range(10):
-            _ = compiled_attention(query_features)
+            _ = compiled_attention(query_features, pos_query_embeddings)
 
         if device.type == "cuda":
             torch.cuda.synchronize()
@@ -895,7 +1060,7 @@ class TestSelfAttention:
         start_time = time.perf_counter()
 
         for _ in range(num_runs):
-            compiled_output = compiled_attention(query_features)
+            compiled_output = compiled_attention(query_features, pos_query_embeddings)
 
         if device.type == "cuda":
             torch.cuda.synchronize()
@@ -923,134 +1088,3 @@ class TestSelfAttention:
                 f"Uncompiled: {avg_time * 1000:.3f} ms\n"
                 f"Compiled: {compiled_avg_time * 1000:.3f} ms"
             )
-
-
-class TestFFN:
-    """Tests for the FFN (Feed-Forward Network) class."""
-
-    def test_initialization(self, standard_ffn: FFN) -> None:
-        """Test proper initialization of FFN."""
-        ffn = standard_ffn
-
-        # Check layers are initialized correctly
-        assert isinstance(ffn.linear_1, torch.nn.Linear)
-        assert isinstance(ffn.activation, torch.nn.GELU)
-        assert isinstance(ffn.linear_2, torch.nn.Linear)
-
-        # Check dimensions
-        assert ffn.linear_1.in_features == 256
-        assert ffn.linear_1.out_features == 1024
-        assert ffn.linear_2.in_features == 1024
-        assert ffn.linear_2.out_features == 256
-
-    def test_forward_pass_shape(self, standard_ffn: FFN) -> None:
-        """Test forward pass produces correct output shape."""
-        ffn = standard_ffn
-        batch_size, seq_len, embedding_dim = 2, 100, 256
-
-        # Create input tensor
-        input_tensor = torch.randn(batch_size, seq_len, embedding_dim)
-
-        # Forward pass
-        output = ffn(input_tensor)
-
-        # Check output shape matches input shape
-        assert output.shape == (batch_size, seq_len, embedding_dim)
-        assert output.dtype == torch.float32
-
-    def test_nonlinearity(self, standard_ffn: FFN) -> None:
-        """Test that FFN applies nonlinearity (output != linear transformation)."""
-        ffn = standard_ffn
-        batch_size, seq_len, embedding_dim = 1, 10, 256
-
-        input_tensor = torch.randn(batch_size, seq_len, embedding_dim)
-        output = ffn(input_tensor)
-
-        # Output should have same shape but different values due to GELU activation
-        assert output.shape == input_tensor.shape
-        assert not torch.allclose(output, input_tensor, rtol=1e-3)
-
-    def test_gradient_flow(self, standard_ffn: FFN) -> None:
-        """Test that gradients flow properly through the FFN module."""
-        ffn = standard_ffn
-        batch_size, seq_len, embedding_dim = 1, 5, 256
-
-        input_tensor = torch.randn(
-            batch_size, seq_len, embedding_dim, requires_grad=True
-        )
-
-        output = ffn(input_tensor)
-        loss = output.sum()
-        loss.backward()
-
-        # Check that gradients are computed for input and parameters
-        assert input_tensor.grad is not None
-        assert ffn.linear_1.weight.grad is not None
-        assert ffn.linear_2.weight.grad is not None
-
-    @pytest.mark.parametrize(
-        "embedding_dim,hidden_dim", [(64, 256), (128, 512), (256, 1024), (512, 2048)]
-    )
-    def test_different_dimensions(self, embedding_dim: int, hidden_dim: int) -> None:
-        """Test with different embedding and hidden dimensions."""
-        ffn = FFN(embedding_dim=embedding_dim, hidden_dim=hidden_dim)
-        batch_size, seq_len = 2, 20
-
-        input_tensor = torch.randn(batch_size, seq_len, embedding_dim)
-        output = ffn(input_tensor)
-
-        assert output.shape == (batch_size, seq_len, embedding_dim)
-        assert output.dtype == torch.float32
-
-    @pytest.mark.parametrize("batch_size,seq_len", [(1, 50), (4, 25), (8, 100)])
-    def test_different_batch_and_sequence_sizes(
-        self, small_ffn: FFN, batch_size: int, seq_len: int
-    ) -> None:
-        """Test with different batch sizes and sequence lengths."""
-        ffn = small_ffn
-        embedding_dim = 64
-
-        input_tensor = torch.randn(batch_size, seq_len, embedding_dim)
-        output = ffn(input_tensor)
-
-        assert output.shape == (batch_size, seq_len, embedding_dim)
-        assert output.dtype == torch.float32
-
-    def test_deterministic(self, standard_ffn: FFN) -> None:
-        """Test that FFN produces deterministic results with same inputs."""
-        ffn = standard_ffn
-        batch_size, seq_len, embedding_dim = 1, 5, 256
-
-        # Set seed for reproducibility
-        torch.manual_seed(42)
-        input_tensor = torch.randn(batch_size, seq_len, embedding_dim)
-
-        # Run twice with same inputs
-        torch.manual_seed(42)
-        output1 = ffn(input_tensor)
-
-        torch.manual_seed(42)
-        output2 = ffn(input_tensor)
-
-        # Outputs should be identical
-        assert torch.allclose(output1, output2, rtol=1e-6, atol=1e-8)
-
-    def test_compilation(self, standard_ffn: FFN) -> None:
-        """Test that FFN compiles without errors."""
-        ffn = standard_ffn
-        batch_size, seq_len, embedding_dim = 2, 50, 256
-
-        input_tensor = torch.randn(batch_size, seq_len, embedding_dim)
-
-        # Compile the model
-        compiled_ffn = torch.compile(ffn, fullgraph=True)
-
-        # Run compiled version
-        compiled_output = compiled_ffn(input_tensor)
-
-        # Run original version for comparison
-        original_output = ffn(input_tensor)
-
-        # Check outputs are equivalent
-        assert compiled_output.shape == original_output.shape
-        assert torch.allclose(compiled_output, original_output, rtol=1e-3, atol=1e-4)
