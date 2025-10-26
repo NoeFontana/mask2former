@@ -25,21 +25,38 @@ theme:
     - navigation.tabs
     - navigation.sections
     - navigation.top
+    - navigation.tracking
     - search.highlight
     - search.share
+    - search.suggest
     - content.code.copy
     - content.code.annotate
+    - content.tabs.link
+    - toc.follow
+    - toc.integrate
 
 plugins:
   - search
   - mkdocstrings:
+      default_handler: python
       handlers:
         python:
           options:
             docstring_style: google
+            docstring_section_style: table
+            heading_level: 2
+            inherited_members: true
             merge_init_into_class: true
             separate_signature: true
             show_signature_annotations: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            signature_crossrefs: true
+            summary: true
+            members_order: source
+            filters:
+              - "!^_"  # Hide private members
+            show_source: false
 
 markdown_extensions:
   - admonition
