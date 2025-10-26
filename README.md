@@ -58,16 +58,18 @@ make update                  # Update all dependencies
 ## Project Structure
 
 ```
-src/mask2former/            # Main package
-├── modeling/               # Core model components
-│   ├── backbone.py         # timm backbone wrapper
-│   ├── decoder.py          # Transformer decoder
-│   ├── pe.py               # Positional embedings
-│   └── common/             # Shared components
-tests/                      # Test suite
-docs/                       # Documentation
-Makefile                    # Development commands
-pyproject.toml              # Project configuration
+src/mask2former/               # Main package
+├── modeling/                  # Core model components
+│   ├── attn/                  # Attention mechanisms
+│   ├── backbone.py            # timm backbone wrapper
+│   ├── common/                # Shared components
+│   ├── pe.py                  # Positional embedings
+│   ├── pixel_decoder/         # Pixel decoder
+│   └── transformer_decoder/   # Transformer decoder
+tests/                         # Test suite
+docs/                          # Documentation
+Makefile                       # Development commands
+pyproject.toml                 # Project configuration
 ```
 
 ## Contributing
