@@ -189,7 +189,7 @@ class SelfAttention(nn.Module):
         return self.out_proj(attn_out)
 
 
-def generate_mask_probabilities(
+def generate_mask_logits(
     output_size: tuple[int, int],
     query_features: torch.Tensor,
     pixel_features: torch.Tensor,
@@ -209,8 +209,8 @@ def generate_mask_probabilities(
         torch.Tensor: Mask probabilities tensor.
             Shape: (batch_size, num_queries, output_size[0], output_size[1])
     """
-    # Use einsum for efficient mask generation (matches reference implementation)
     mask_embed = mask_embedder(query_features)
+    # Mask logits are obtained via a dot product over the embedding dimension
     outputs_mask = torch.einsum("bqc,bchw->bqhw", mask_embed, pixel_features)
 
     # Interpolate to target size if different from pixel features size
