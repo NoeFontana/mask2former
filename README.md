@@ -38,14 +38,14 @@ make test                    # Run test suite
 make test-cov                # Run tests with coverage report
 make lint                    # Lint and auto-fix issues
 make format                  # Format code
-make type-check             # Type checking with pyright
+make type-check              # Type checking with pyright
 ```
 
 ### Documentation
 
 ```bash
 make docs                    # Serve docs locally
-make docs-build             # Build static docs
+make docs-build              # Build static docs
 ```
 
 ### Maintenance
@@ -60,14 +60,14 @@ make update                  # Update all dependencies
 ```
 src/mask2former/            # Main package
 ├── modeling/               # Core model components
-│   ├── backbone.py        # timm backbone wrapper
-│   ├── decoder.py         # Transformer decoder
-│   ├── pe.py              # Positional embedings
-│   └── common/            # Shared components
+│   ├── backbone.py         # timm backbone wrapper
+│   ├── decoder.py          # Transformer decoder
+│   ├── pe.py               # Positional embedings
+│   └── common/             # Shared components
 tests/                      # Test suite
 docs/                       # Documentation
 Makefile                    # Development commands
-pyproject.toml             # Project configuration
+pyproject.toml              # Project configuration
 ```
 
 ## Contributing
