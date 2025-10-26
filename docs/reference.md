@@ -8,6 +8,14 @@ This page contains the API reference for the `mask2former` package.
 
 ## Core Modeling Components
 
+### Attention
+
+The attn module implements attention mechanisms for the Mask2Former architecture.
+
+::: mask2former.modeling.attn
+options:
+heading_level: 3
+
 ### Backbone
 
 The backbone module provides feature extraction using timm models.
@@ -20,15 +28,7 @@ heading_level: 3
 
 The decoder module implements the Mask2Former transformer decoder architecture.
 
-::: mask2former.modeling.decoder
-options:
-heading_level: 3
-
-### Attention
-
-The attn module implements attention mechanisms for the Mask2Former architecture.
-
-::: mask2former.modeling.attn
+::: mask2former.modeling.transformer_decoder.decoder
 options:
 heading_level: 3
 

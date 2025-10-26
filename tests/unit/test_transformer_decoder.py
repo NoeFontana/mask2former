@@ -7,7 +7,10 @@ import pytest
 import torch
 
 from mask2former.modeling.attn import CrossAttention, SelfAttention
-from mask2former.modeling.decoder import DecoderLayer, TransformerDecoder
+from mask2former.modeling.transformer_decoder.decoder import (
+    DecoderLayer,
+    TransformerDecoder,
+)
 
 logger = logging.getLogger(__name__)
 
