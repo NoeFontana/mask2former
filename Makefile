@@ -63,4 +63,4 @@ publish: ## Publish the package to PyPI (requires PYPI_TOKEN)
 	uv publish
 
 update: ## Update all dependencies
-	uv sync --upgrade
+	uv sync --upgrade --all-extras
