@@ -5,22 +5,22 @@ import logging
 import pytest
 import torch
 
-from mask2former.modeling.decoder import MaskedAttention, SelfAttention
+from mask2former.modeling.decoder import CrossAttention, SelfAttention
 
 # Set up logger for this module
 logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="class")
-def standard_masked_attention() -> MaskedAttention:
-    """Fixture providing a standard MaskedAttention for testing."""
-    return MaskedAttention(embedding_dim=256, num_head=8)
+def standard_cross_attention() -> CrossAttention:
+    """Fixture providing a standard CrossAttention for testing."""
+    return CrossAttention(embedding_dim=256, num_head=8)
 
 
 @pytest.fixture(scope="class")
-def small_masked_attention() -> MaskedAttention:
-    """Fixture providing a small MaskedAttention for quick tests."""
-    return MaskedAttention(embedding_dim=64, num_head=2)
+def small_cross_attention() -> CrossAttention:
+    """Fixture providing a small CrossAttention for quick tests."""
+    return CrossAttention(embedding_dim=64, num_head=2)
 
 
 @pytest.fixture(scope="class")
@@ -35,12 +35,12 @@ def small_self_attention() -> SelfAttention:
     return SelfAttention(embedding_dim=64, num_head=2)
 
 
-class TestMaskedAttention:
-    """Tests for the MaskedAttention class."""
+class TestCrossAttention:
+    """Tests for the CrossAttention class."""
 
-    def test_initialization(self, standard_masked_attention: MaskedAttention) -> None:
-        """Test proper initialization of MaskedAttention."""
-        attention = standard_masked_attention
+    def test_initialization(self, standard_cross_attention: CrossAttention) -> None:
+        """Test proper initialization of CrossAttention."""
+        attention = standard_cross_attention
 
         # Check multi-head attributes
         assert attention.num_head == 8
@@ -62,11 +62,9 @@ class TestMaskedAttention:
         assert attention.out_proj.in_features == 256
         assert attention.out_proj.out_features == 256
 
-    def test_forward_pass_shape(
-        self, standard_masked_attention: MaskedAttention
-    ) -> None:
+    def test_forward_pass_shape(self, standard_cross_attention: CrossAttention) -> None:
         """Test forward pass produces correct output shape."""
-        attention = standard_masked_attention
+        attention = standard_cross_attention
         batch_size, num_queries, embedding_dim = 2, 100, 256
         height, width = 32, 32
 
@@ -91,10 +89,10 @@ class TestMaskedAttention:
         assert output.dtype == torch.float32
 
     def test_residual_connection(
-        self, standard_masked_attention: MaskedAttention
+        self, standard_cross_attention: CrossAttention
     ) -> None:
         """Test that residual connection is applied correctly."""
-        attention = standard_masked_attention
+        attention = standard_cross_attention
         batch_size, num_queries, embedding_dim = 1, 10, 256
         height, width = 8, 8
 
@@ -117,9 +115,9 @@ class TestMaskedAttention:
         assert output.shape == query_features.shape
         assert not torch.allclose(output, query_features, rtol=1e-3)
 
-    def test_mask_effect(self, standard_masked_attention: MaskedAttention) -> None:
+    def test_mask_effect(self, standard_cross_attention: CrossAttention) -> None:
         """Test that different masks produce different outputs."""
-        attention = standard_masked_attention
+        attention = standard_cross_attention
         batch_size, num_queries, embedding_dim = 1, 5, 256
         height, width = 4, 4
 
@@ -151,9 +149,9 @@ class TestMaskedAttention:
         # Different masks should produce different outputs
         assert not torch.allclose(output_full, output_partial, rtol=1e-3)
 
-    def test_mask_all_false(self, standard_masked_attention: MaskedAttention) -> None:
+    def test_mask_all_false(self, standard_cross_attention: CrossAttention) -> None:
         """Test behavior when mask is all False."""
-        attention = standard_masked_attention
+        attention = standard_cross_attention
         batch_size, num_queries, embedding_dim = 1, 3, 256
         height, width = 4, 4
 
@@ -177,9 +175,9 @@ class TestMaskedAttention:
         # original features. The exact behavior depends on PyTorch's
         # scaled_dot_product_attention implementation
 
-    def test_gradient_flow(self, standard_masked_attention: MaskedAttention) -> None:
+    def test_gradient_flow(self, standard_cross_attention: CrossAttention) -> None:
         """Test that gradients flow properly through the attention module."""
-        attention = standard_masked_attention
+        attention = standard_cross_attention
         batch_size, num_queries, embedding_dim = 1, 10, 256
         height, width = 8, 8
 
@@ -219,7 +217,7 @@ class TestMaskedAttention:
         self, embedding_dim: int, num_head: int
     ) -> None:
         """Test with different embedding dimensions and head counts."""
-        attention = MaskedAttention(embedding_dim=embedding_dim, num_head=num_head)
+        attention = CrossAttention(embedding_dim=embedding_dim, num_head=num_head)
         batch_size, num_queries = 2, 20
         height, width = 16, 16
 
@@ -242,10 +240,10 @@ class TestMaskedAttention:
 
     @pytest.mark.parametrize("height,width", [(8, 8), (16, 32), (64, 64)])
     def test_different_spatial_sizes(
-        self, small_masked_attention: MaskedAttention, height: int, width: int
+        self, small_cross_attention: CrossAttention, height: int, width: int
     ) -> None:
         """Test with different spatial dimensions."""
-        attention = small_masked_attention
+        attention = small_cross_attention
         batch_size, num_queries, embedding_dim = 1, 10, 64
 
         query_features = torch.randn(batch_size, num_queries, embedding_dim)
@@ -267,12 +265,12 @@ class TestMaskedAttention:
     @pytest.mark.parametrize("batch_size,num_queries", [(1, 50), (3, 100), (8, 200)])
     def test_different_batch_and_query_sizes(
         self,
-        small_masked_attention: MaskedAttention,
+        small_cross_attention: CrossAttention,
         batch_size: int,
         num_queries: int,
     ) -> None:
         """Test with different batch sizes and number of queries."""
-        attention = small_masked_attention
+        attention = small_cross_attention
         embedding_dim = 64
         height, width = 16, 16
 
@@ -294,10 +292,10 @@ class TestMaskedAttention:
         assert output.dtype == torch.float32
 
     def test_attention_deterministic(
-        self, standard_masked_attention: MaskedAttention
+        self, standard_cross_attention: CrossAttention
     ) -> None:
         """Test that attention produces deterministic results with same inputs."""
-        attention = standard_masked_attention
+        attention = standard_cross_attention
         batch_size, num_queries, embedding_dim = 1, 5, 256
         height, width = 8, 8
 
@@ -331,11 +329,11 @@ class TestMaskedAttention:
         # Outputs should be identical
         assert torch.allclose(output1, output2, rtol=1e-6, atol=1e-8)
 
-    def test_masked_attention_compilation(
-        self, standard_masked_attention: MaskedAttention
+    def test_cross_attention_compilation(
+        self, standard_cross_attention: CrossAttention
     ) -> None:
-        """Test that MaskedAttention compiles without graph breaks."""
-        attention = standard_masked_attention
+        """Test that CrossAttention compiles without graph breaks."""
+        attention = standard_cross_attention
         batch_size, num_queries, embedding_dim = 2, 50, 256
         height, width = 16, 16
 
@@ -371,10 +369,10 @@ class TestMaskedAttention:
         assert torch.allclose(compiled_output, original_output, rtol=1e-4)
 
     def test_image_features_flattening(
-        self, standard_masked_attention: MaskedAttention
+        self, standard_cross_attention: CrossAttention
     ) -> None:
         """Test that image features are correctly flattened and permuted."""
-        attention = standard_masked_attention
+        attention = standard_cross_attention
         batch_size, num_queries, embedding_dim = 1, 5, 256
         height, width = 4, 8
 
@@ -398,9 +396,9 @@ class TestMaskedAttention:
         )
         assert output.shape == (batch_size, num_queries, embedding_dim)
 
-    def test_mask_flattening(self, standard_masked_attention: MaskedAttention) -> None:
+    def test_mask_flattening(self, standard_cross_attention: CrossAttention) -> None:
         """Test that mask is correctly flattened."""
-        attention = standard_masked_attention
+        attention = standard_cross_attention
         batch_size, num_queries, embedding_dim = 1, 3, 256
         height, width = 4, 6
 
@@ -427,7 +425,7 @@ class TestMaskedAttention:
     def test_multi_head_validation(self) -> None:
         """Test multi-head attention parameter validation."""
         # Test valid configurations
-        attention_valid = MaskedAttention(embedding_dim=256, num_head=8)
+        attention_valid = CrossAttention(embedding_dim=256, num_head=8)
         assert attention_valid.num_head == 8
         assert attention_valid.head_embedding_dim == 32
 
@@ -435,11 +433,11 @@ class TestMaskedAttention:
         with pytest.raises(
             ValueError, match="embedding_dim must be divisible by num_head"
         ):
-            MaskedAttention(embedding_dim=257, num_head=8)
+            CrossAttention(embedding_dim=257, num_head=8)
 
     def test_single_head_attention(self) -> None:
         """Test single-head attention (should use Identity for out_proj)."""
-        attention = MaskedAttention(embedding_dim=64, num_head=1)
+        attention = CrossAttention(embedding_dim=64, num_head=1)
 
         assert attention.num_head == 1
         assert attention.head_embedding_dim == 64
@@ -467,7 +465,7 @@ class TestMaskedAttention:
     def test_different_head_counts(self, num_head: int) -> None:
         """Test with different numbers of attention heads."""
         embedding_dim = 128
-        attention = MaskedAttention(embedding_dim=embedding_dim, num_head=num_head)
+        attention = CrossAttention(embedding_dim=embedding_dim, num_head=num_head)
 
         batch_size, num_queries = 2, 20
         height, width = 16, 16
@@ -491,7 +489,7 @@ class TestMaskedAttention:
 
     def test_head_reshaping(self) -> None:
         """Test that tensors are correctly reshaped for multi-head attention."""
-        attention = MaskedAttention(embedding_dim=256, num_head=8)
+        attention = CrossAttention(embedding_dim=256, num_head=8)
 
         batch_size, num_queries = 1, 5
         height, width = 4, 4
@@ -512,11 +510,9 @@ class TestMaskedAttention:
         )
         assert output.shape == (batch_size, num_queries, 256)
 
-    def test_compile_validation(
-        self, standard_masked_attention: MaskedAttention
-    ) -> None:
+    def test_compile_validation(self, standard_cross_attention: CrossAttention) -> None:
         """Test that compilation works without errors and produces valid results."""
-        attention = standard_masked_attention
+        attention = standard_cross_attention
         batch_size, num_queries, embedding_dim = 2, 50, 256
         height, width = 16, 16
 
@@ -568,17 +564,17 @@ class TestMaskedAttention:
     @pytest.mark.parametrize("feature_size", [32, 64, 128])
     @torch.inference_mode()
     def test_performance_benchmark(
-        self, standard_masked_attention: MaskedAttention, feature_size: int
+        self, standard_cross_attention: CrossAttention, feature_size: int
     ) -> None:
-        """Benchmark test for MaskedAttention performance.
+        """Benchmark test for CrossAttention performance.
 
-        This test measures the performance of the MaskedAttention module
+        This test measures the performance of the CrossAttention module
         with realistic input sizes. It's marked as 'benchmark' to be
         disabled by default in CI.
         """
         import time
 
-        attention = standard_masked_attention
+        attention = standard_cross_attention
         # Use realistic sizes for benchmarking
         batch_size, num_queries, embedding_dim = 8, 200, 256
         height, width = feature_size, feature_size
@@ -637,7 +633,7 @@ class TestMaskedAttention:
 
         # Log benchmark results
         logger.info(
-            "\nMaskedAttention Benchmark Results\n"
+            "\nCrossAttention Benchmark Results\n"
             + ("=" * 50 + "\n")
             + f"Device: {device}\n"
             f"Input shapes - Queries: {query_features.shape}, "

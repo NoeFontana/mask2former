@@ -7,8 +7,8 @@ from mask2former.modeling.common.ffn import FFN, MLP
 from mask2former.modeling.pe import sine_pe_2d
 
 
-class MaskedAttention(nn.Module):
-    """Masked attention module.
+class CrossAttention(nn.Module):
+    """Cross attention module implementing Masked Attention.
 
     This module implements a masked attention mechanism where queries attend to
     image features through key-value projections, with attention masked by the
@@ -265,7 +265,7 @@ class DecoderLayer(nn.Module):
     ) -> None:
         super().__init__()
 
-        self.masked_attention = MaskedAttention(embedding_dim, num_head)
+        self.cross_attention = CrossAttention(embedding_dim, num_head)
         self.self_attention = SelfAttention(embedding_dim, num_head)
         self.ffn = FFN(embedding_dim, hidden_dim)
 
@@ -301,7 +301,7 @@ class DecoderLayer(nn.Module):
         """
         query_features = self.norm_1(
             query_features
-            + self.masked_attention(
+            + self.cross_attention(
                 query_features,
                 image_features,
                 masks,
@@ -329,7 +329,6 @@ class TransformerDecoder(nn.Module):
         num_query: int,
         num_head: int,
         hidden_dim: int,
-        num_classes: int,
         num_feature_levels: int = 3,
         mask_embedder_hidden_dim: int = 256,
         input_size: tuple[int, int] = (512, 512),
@@ -369,7 +368,8 @@ class TransformerDecoder(nn.Module):
         self.input_height, self.input_width = input_size
         self.output_divisors = output_divisors
 
-        # Register positional embeddings as buffers
+        # Register positional embeddings as buffers and create static list
+        pos_embeddings = []
         for i, divisor in enumerate(self.output_divisors):
             ape = (
                 sine_pe_2d(
@@ -381,6 +381,10 @@ class TransformerDecoder(nn.Module):
                 .view(1, -1, embedding_dim)
             )
             self.register_buffer(f"ape_{i}", ape)
+            pos_embeddings.append(ape)
+
+        # Store as static list for torch.compile compatibility
+        self.pos_embeddings_list = pos_embeddings
 
         # Initialize parameters
         self._reset_parameters()
@@ -423,21 +427,18 @@ class TransformerDecoder(nn.Module):
         """Forward pass optimized for torch.compile and torch.export."""
         device, dtype = self.initial_queries.device, self.initial_queries.dtype
 
-        query_features = self.initial_queries.expand(mask_features.shape[0], -1, -1)
-        pos_query = self.pos_query_embed.expand(mask_features.shape[0], -1, -1)
+        batch_size = mask_features.shape[0]
+        query_features = self.initial_queries.expand(batch_size, -1, -1)
+        pos_query = self.pos_query_embed.expand(batch_size, -1, -1)
 
-        pos_embeddings_list = [
-            getattr(self, f"ape_{i}") for i in range(self.num_feature_levels)
-        ]
-
-        all_aux_masks = []
+        all_aux_masks: list[torch.Tensor] = []
 
         for layer in self.layers:
             layer = cast(nn.ModuleList, layer)
-            layer_aux_masks = []
+            layer_aux_masks: list[torch.Tensor] = []
             for level_idx, decoder_layer in enumerate(layer):
                 image_features = image_features_list[level_idx]
-                pos_image_embeddings = pos_embeddings_list[level_idx]
+                pos_image_embeddings = self.pos_embeddings_list[level_idx]
 
                 # Generate mask logits at mask_features resolution (not image_features)
                 mask_logits = generate_mask_logits(
@@ -470,11 +471,11 @@ class TransformerDecoder(nn.Module):
             query_features, mask_features
         )
 
-        aux_masks_tensor = (
-            torch.stack(all_aux_masks, dim=0)
-            if return_auxiliary_masks and all_aux_masks
-            else torch.empty(0, device=device, dtype=dtype)
-        )
+        # Create auxiliary masks tensor with better torch.compile compatibility
+        if return_auxiliary_masks and all_aux_masks:
+            aux_masks_tensor = torch.stack(all_aux_masks, dim=0)
+        else:
+            aux_masks_tensor = torch.empty(0, device=device, dtype=dtype)
 
         return {
             "query_features": final_features,
