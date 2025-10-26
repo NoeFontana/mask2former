@@ -27,14 +27,13 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = ["setuptools>=80.9.0", "timm>=1.0.20", "torch>=2.9.0"]
-
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0.0",
     "pytest-cov>=4.0.0",
     "pytest-xdist>=3.0.0",
-    "ruff>=0.6.0",
-    "pyright>=1.1.380",
+    "ruff>=0.14.2",
+    "pyright>=1.1.407",
     "pre-commit>=3.0.0",
 ]
 docs = [
