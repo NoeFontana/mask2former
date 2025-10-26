@@ -1,126 +1,84 @@
 # Mask2Former
 
-[![CI](https://github.com/noe-fontana/mask2former/workflows/CI/badge.svg)](https://github.com/noe-fontana/mask2former/actions)
+[![Status](https://img.shields.io/badge/status-alpha-orange.svg)](https://github.com/NoeFontana/mask2former)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![Checked with pyright](https://microsoft.github.io/pyright/img/pyright_badge.svg)](https://microsoft.github.io/pyright/)
+[![CI](https://github.com/NoeFontana/mask2former/actions/workflows/ci.yml/badge.svg)](https://github.com/NoeFontana/mask2former/actions)
+
+_**Alpha status**: Core functionality is under active development._
 
 A [PyTorch](https://pytorch.org/projects/pytorch/) reimplementation of [Mask2Former](https://arxiv.org/pdf/2112.01527) using timm backbones.
 
-## Requirements
-
-- Python 3.11 or higher
-- [uv](https://docs.astral.sh/uv/) for dependency management
-
-## Installation
-
-### Using uv (recommended)
+## Quick Start
 
 ```bash
-# Clone the repository
+# Clone and setup
 git clone https://github.com/NoeFontana/mask2former.git
 cd mask2former
 
-# Install uv if you haven't already
+# Install uv (if needed)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Create a virtual environment and install dependencies
-uv sync
-
-# Install development dependencies
+# Install dependencies
 uv sync --all-extras
+
+# Set up pre-commit hooks
+make pre-commit
 ```
 
-## Usage
+## Core Workflows
 
-### Development
-
-```bash
-# Run tests
-uv run pytest
-
-# Run tests with coverage
-uv run pytest --cov
-
-# Lint and format code
-uv run ruff check .          # Check for issues
-uv run ruff check . --fix    # Fix auto-fixable issues
-uv run ruff format .         # Format code
-
-# Type checking
-uv run pyright
-
-# Run all checks (lint, format, type check, test)
-make check  # If using the provided Makefile
-```
-
-### Pre-commit hooks
-
-Set up pre-commit hooks to automatically run code quality checks:
+### Development Commands
 
 ```bash
-uv run pre-commit install
+# Run all quality checks
+make check                   # lint + format-check + type-check + test
 
-# Run hooks manually
-uv run pre-commit run --all-files
+# Individual checks
+make test                    # Run test suite
+make test-cov                # Run tests with coverage report
+make lint                    # Lint and auto-fix issues
+make format                  # Format code
+make type-check             # Type checking with pyright
 ```
 
 ### Documentation
 
-Build and serve documentation locally:
+```bash
+make docs                    # Serve docs locally
+make docs-build             # Build static docs
+```
+
+### Maintenance
 
 ```bash
-# Install docs dependencies
-uv sync --extra docs
-
-# Serve documentation locally
-uv run mkdocs serve
-
-# Build documentation
-uv run mkdocs build
+make clean                   # Clean build artifacts and cache
+make update                  # Update all dependencies
 ```
 
 ## Project Structure
 
 ```
-mask2former/
-├── .github/
-│   └── workflows/          # GitHub Actions CI/CD
-├── docs/                   # Documentation source
-├── src/
-│   └── mask2former/    # Main package source code
-│       ├── __init__.py
-│       └── ...
-├── tests/                  # Test suite
-│   ├── __init__.py
-│   └── ...
-├── .gitignore
-├── .pre-commit-config.yaml
-├── LICENSE
-├── Makefile               # Development shortcuts
-├── pyproject.toml         # Project configuration
-└── README.md
+src/mask2former/            # Main package
+├── modeling/               # Core model components
+│   ├── backbone.py        # timm backbone wrapper
+│   ├── decoder.py         # Transformer decoder
+│   ├── pe.py              # Positional embedings
+│   └── common/            # Shared components
+tests/                      # Test suite
+docs/                       # Documentation
+Makefile                    # Development commands
+pyproject.toml             # Project configuration
 ```
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Run the test suite (`uv run pytest`)
-5. Run code quality checks (`uv run ruff check . && uv run ruff format . && uv run pyright`)
-6. Commit your changes (`git commit -m 'Add some amazing feature'`)
-7. Push to the branch (`git push origin feature/amazing-feature`)
-8. Open a Pull Request
+1. Fork and create a feature branch
+2. Make changes with tests
+3. Run `make check` to ensure quality
+4. Submit a pull request
 
-### Development Guidelines
-
-- Follow [PEP 8](https://pep8.org/) style guidelines (enforced by ruff)
-- Write comprehensive tests for new functionality
-- Add type hints to all public APIs
-- Update documentation for user-facing changes
-- Keep the changelog updated
+**Requirements:** Python 3.11+, comprehensive tests, type hints, and documentation updates.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) for details.
