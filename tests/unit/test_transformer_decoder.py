@@ -15,7 +15,7 @@ from mask2former.modeling.transformer_decoder.decoder import (
 logger = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="function")
 def decoder_layer() -> DecoderLayer:
     """Standard decoder layer for testing."""
     return DecoderLayer(embedding_dim=256, num_head=8, hidden_dim=1024)
