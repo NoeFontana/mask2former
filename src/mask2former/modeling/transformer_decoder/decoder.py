@@ -187,22 +187,16 @@ class TransformerDecoder(nn.Module):
         self.output_divisors = output_divisors
 
         # Register positional embeddings as buffers and create static list
-        pos_embeddings = []
         for i, divisor in enumerate(self.output_divisors):
-            ape = (
-                sine_pe_2d(
-                    embedding_dim,
-                    self.input_height // divisor,
-                    self.input_width // divisor,
-                )
-                .permute(1, 2, 0)
-                .view(1, -1, embedding_dim)
+            ape = sine_pe_2d(
+                embedding_dim,
+                self.input_height // divisor,
+                self.input_width // divisor,
+                device=self.initial_queries.device,
             )
+            # Reshape for use in attention: (1, H*W, C)
+            ape = ape.permute(1, 2, 0).view(1, -1, embedding_dim)
             self.register_buffer(f"ape_{i}", ape)
-            pos_embeddings.append(ape)
-
-        # Store as static list for torch.compile compatibility
-        self.pos_embeddings_list = pos_embeddings
 
         # Initialize parameters
         self._reset_parameters()
@@ -249,6 +243,11 @@ class TransformerDecoder(nn.Module):
         query_features = self.initial_queries.expand(batch_size, -1, -1)
         pos_query = self.pos_query_embed.expand(batch_size, -1, -1)
 
+        # Create a static list of positional embeddings from buffers.
+        # This is torch.compile-friendly as the list is created from static attributes.
+        pos_embeddings_list = [
+            getattr(self, f"ape_{i}") for i in range(self.num_feature_levels)
+        ]
         all_aux_masks: list[torch.Tensor] = []
 
         for layer in self.layers:
@@ -256,7 +255,7 @@ class TransformerDecoder(nn.Module):
             layer_aux_masks: list[torch.Tensor] = []
             for level_idx, decoder_layer in enumerate(layer):
                 image_features = image_features_list[level_idx]
-                pos_image_embeddings = self.pos_embeddings_list[level_idx]
+                pos_image_embeddings = pos_embeddings_list[level_idx]
 
                 # Generate mask logits at mask_features resolution (not image_features)
                 mask_logits = generate_mask_logits(
