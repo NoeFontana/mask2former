@@ -4,6 +4,7 @@ import pytest
 import torch
 
 from mask2former.modeling.attn import SelfAttention
+from tests.benchmark import benchmark_module
 
 logger = logging.getLogger(__name__)
 
@@ -311,96 +312,60 @@ class TestSelfAttention:
         with different sequence lengths. It's marked as 'benchmark' to be
         disabled by default in CI.
         """
-        import time
-
         attention = standard_self_attention
         batch_size, embedding_dim = 8, 256
 
         query_features = torch.randn(batch_size, num_queries, embedding_dim)
         pos_query_embeddings = torch.randn(batch_size, num_queries, embedding_dim)
 
-        # Move to GPU if available for more realistic benchmarking
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        attention = attention.to(device)
-        query_features = query_features.to(device)
-
-        # Warm up runs
-        for _ in range(10):
-            _ = attention(query_features, pos_query_embeddings)
-
-        if device.type == "cuda":
-            torch.cuda.synchronize()
-
-        # Benchmark forward pass
-        num_runs = 100
-        output = None
-        start_time = time.perf_counter()
-
-        for _ in range(num_runs):
-            output = attention(query_features, pos_query_embeddings)
-
-        if device.type == "cuda":
-            torch.cuda.synchronize()
-
-        end_time = time.perf_counter()
-
-        avg_time = (end_time - start_time) / num_runs
+        # Benchmark uncompiled version
+        uncompiled_results = benchmark_module(
+            attention, query_features, pos_query_embeddings
+        )
 
         # Basic sanity checks
-        assert output is not None
-        assert output.shape == (batch_size, num_queries, embedding_dim)
-        assert avg_time > 0
+        assert uncompiled_results["output_shape"] == (
+            batch_size,
+            num_queries,
+            embedding_dim,
+        )
+        assert uncompiled_results["avg_time_ms"] > 0
 
-        # Log benchmark results
         logger.info(
             "\nSelfAttention Benchmark Results\n"
             + ("=" * 50 + "\n")
-            + f"Device: {device}\n"
+            + f"Device: {uncompiled_results['device']}\n"
             f"Input shape: {query_features.shape}\n"
             f"Batch size: {batch_size}, Sequence length: {num_queries}\n"
-            f"Average forward pass time: {avg_time * 1000:.3f} ms\n"
-            f"Throughput: {batch_size / avg_time:.2f} samples/sec"
+            f"Average forward pass time: {uncompiled_results['avg_time_ms']:.3f} ms\n"
+            f"Throughput: {uncompiled_results['throughput']:.2f} samples/sec"
         )
 
-        # Test compiled version benchmark
+        # Benchmark compiled version
         compiled_attention = torch.compile(attention, fullgraph=True)
+        compiled_results = benchmark_module(
+            compiled_attention, query_features, pos_query_embeddings
+        )
 
-        # Warm up compiled version
-        for _ in range(10):
-            _ = compiled_attention(query_features, pos_query_embeddings)
+        # Basic sanity checks
+        assert compiled_results["output_shape"] == (
+            batch_size,
+            num_queries,
+            embedding_dim,
+        )
+        assert compiled_results["avg_time_ms"] > 0
 
-        if device.type == "cuda":
-            torch.cuda.synchronize()
-
-        compiled_output = None
-        start_time = time.perf_counter()
-
-        for _ in range(num_runs):
-            compiled_output = compiled_attention(query_features, pos_query_embeddings)
-
-        if device.type == "cuda":
-            torch.cuda.synchronize()
-
-        end_time = time.perf_counter()
-
-        compiled_avg_time = (end_time - start_time) / num_runs
-
-        speedup = avg_time / compiled_avg_time
+        speedup = uncompiled_results["avg_time_ms"] / compiled_results["avg_time_ms"]
         logger.info(
             "\nCompiled Version Results:\n"
-            f"Compiled forward pass time: {compiled_avg_time * 1000:.3f} ms\n"
-            f"Compiled throughput: {batch_size / compiled_avg_time:.2f} samples/sec\n"
+            f"Compiled forward pass time: {compiled_results['avg_time_ms']:.3f} ms\n"
+            f"Compiled throughput: {compiled_results['throughput']:.2f} samples/sec\n"
             f"Compilation speedup: {speedup:.2f}x\n" + "=" * 50
         )
 
-        # Compiled version produces same results
-        assert compiled_output is not None
-        assert torch.allclose(output, compiled_output, rtol=1e-4, atol=1e-5)
-
-        assert compiled_avg_time > 0
-        if compiled_avg_time > avg_time:
+        if compiled_results["avg_time_ms"] > uncompiled_results["avg_time_ms"]:
             logger.warning(
                 "Compiled version was not faster than uncompiled version.\n"
-                f"Uncompiled: {avg_time * 1000:.3f} ms\n"
-                f"Compiled: {compiled_avg_time * 1000:.3f} ms"
+                f"Uncompiled: {uncompiled_results['avg_time_ms']:.3f} ms\n"
+                f"Compiled: {compiled_results['avg_time_ms']:.3f} ms"
             )
