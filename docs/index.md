@@ -1,6 +1,10 @@
 # Mask2Former
 
-A PyTorch reimplementation of mask2former using timm backbones.
+_**Alpha status**: Core functionality is under active development._
+
+The main missing pieces are the Pixel Decoder and the Mask2Former Loss.
+
+A [PyTorch](https://pytorch.org/projects/pytorch/) reimplementation of [Mask2Former](https://arxiv.org/pdf/2112.01527) using timm backbones.
 
 ## Quick Start
 
