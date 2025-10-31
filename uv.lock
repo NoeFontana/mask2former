@@ -482,6 +482,8 @@ dev = [
     { name = "pytest-xdist" },
     { name = "ruff" },
 ]
+
+[package.dev-dependencies]
 docs = [
     { name = "mkdocs" },
     { name = "mkdocs-material" },
@@ -490,9 +492,6 @@ docs = [
 
 [package.metadata]
 requires-dist = [
-    { name = "mkdocs", marker = "extra == 'docs'", specifier = ">=1.5.0" },
-    { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9.0.0" },
-    { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = ">=0.20.0" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.0.0" },
     { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1.407" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
@@ -503,7 +502,14 @@ requires-dist = [
     { name = "timm", specifier = ">=1.0.20" },
     { name = "torch", specifier = ">=2.9.0" },
 ]
-provides-extras = ["dev", "docs"]
+provides-extras = ["dev"]
+
+[package.metadata.requires-dev]
+docs = [
+    { name = "mkdocs", specifier = ">=1.5.0" },
+    { name = "mkdocs-material", specifier = ">=9.0.0" },
+    { name = "mkdocstrings", extras = ["python"], specifier = ">=0.20.0" },
+]
 
 [[package]]
 name = "mergedeep"

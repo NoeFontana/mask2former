@@ -36,11 +36,14 @@ dev = [
     "pyright>=1.1.407",
     "pre-commit>=3.0.0",
 ]
+
+[dependency-groups]
 docs = [
     "mkdocs>=1.5.0",
     "mkdocs-material>=9.0.0",
     "mkdocstrings[python]>=0.20.0",
 ]
+
 
 [project.urls]
 Homepage = "https://github.com/NoeFontana/mask2former"
