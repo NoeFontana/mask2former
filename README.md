@@ -18,8 +18,8 @@ cd mask2former
 # Install uv (if needed)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Install dependencies
-uv sync --all-extras
+# Install all dev dependencies
+uv sync --all-groups
 
 # Set up pre-commit hooks
 make pre-commit

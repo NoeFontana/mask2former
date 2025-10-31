@@ -89,7 +89,7 @@ Args:
 - **Python 3.11+** required
 - **PyTorch 2.9+** for latest attention functions
 - **timm 1.0.20+** for modern backbone support
-- Use `uv sync --all-extras` for dependency management
+- Use `uv sync --all-groups` for dependency management
 
 ## Key Files for Context
 

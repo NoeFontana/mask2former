@@ -5,7 +5,7 @@ help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 install: ## Install the package and all dependencies
-	uv sync --all-extras
+	uv sync --all-groups
 
 test: ## Run tests
 	uv run pytest
@@ -63,4 +63,4 @@ publish: ## Publish the package to PyPI (requires PYPI_TOKEN)
 	uv publish
 
 update: ## Update all dependencies
-	uv sync --upgrade --all-extras
+	uv sync --upgrade --all-groups
