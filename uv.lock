@@ -473,8 +473,13 @@ dependencies = [
     { name = "torch" },
 ]
 
-[package.optional-dependencies]
-dev = [
+[package.dev-dependencies]
+docs = [
+    { name = "mkdocs" },
+    { name = "mkdocs-material" },
+    { name = "mkdocstrings", extra = ["python"] },
+]
+test = [
     { name = "pre-commit" },
     { name = "pyright" },
     { name = "pytest" },
@@ -483,32 +488,26 @@ dev = [
     { name = "ruff" },
 ]
 
-[package.dev-dependencies]
-docs = [
-    { name = "mkdocs" },
-    { name = "mkdocs-material" },
-    { name = "mkdocstrings", extra = ["python"] },
-]
-
 [package.metadata]
 requires-dist = [
-    { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.0.0" },
-    { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1.407" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0.0" },
-    { name = "pytest-xdist", marker = "extra == 'dev'", specifier = ">=3.0.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.14.2" },
     { name = "setuptools", specifier = ">=80.9.0" },
     { name = "timm", specifier = ">=1.0.20" },
     { name = "torch", specifier = ">=2.9.0" },
 ]
-provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
 docs = [
     { name = "mkdocs", specifier = ">=1.5.0" },
     { name = "mkdocs-material", specifier = ">=9.0.0" },
     { name = "mkdocstrings", extras = ["python"], specifier = ">=0.20.0" },
+]
+test = [
+    { name = "pre-commit", specifier = ">=3.0.0" },
+    { name = "pyright", specifier = ">=1.1.407" },
+    { name = "pytest", specifier = ">=8.0.0" },
+    { name = "pytest-cov", specifier = ">=4.0.0" },
+    { name = "pytest-xdist", specifier = ">=3.0.0" },
+    { name = "ruff", specifier = ">=0.14.2" },
 ]
 
 [[package]]

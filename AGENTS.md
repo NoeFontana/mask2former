@@ -65,4 +65,4 @@ This is a PyTorch reimplementation of [Mask2Former](https://arxiv.org/pdf/2112.0
 - **Python 3.11+**
 - **PyTorch 2.9+**
 - **timm 1.0.20+**
-- Use `uv sync --all-extras` to install and manage dependencies.
+- Use `uv sync --all-groups` to install and manage dependencies.

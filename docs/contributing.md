@@ -12,10 +12,10 @@ Thank you for your interest in contributing to this project!
    cd mask2former
    ```
 
-3. Install dependencies:
+3. Install all dev dependencies:
 
    ```bash
-   uv sync --all-extras
+   uv sync --all-groups
    ```
 
 4. Set up pre-commit hooks:
