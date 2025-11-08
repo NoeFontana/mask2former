@@ -8,6 +8,8 @@ _**Alpha status**: Core functionality is under active development._
 
 A [PyTorch](https://pytorch.org/projects/pytorch/) reimplementation of [Mask2Former](https://arxiv.org/pdf/2112.01527) using timm backbones.
 
+[External Documentation](https://noefontana.github.io/mask2former/)
+
 ## Quick Start
 
 ```bash
